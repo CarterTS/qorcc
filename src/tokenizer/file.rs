@@ -45,4 +45,54 @@ impl FileManager
 
         Ok(())
     }
+
+    /// Construct a token iterator
+    pub fn iter<'a>(&'a self) -> FileTokenIterator<'a>
+    {
+        FileTokenIterator { i: 0, file: self }
+    }
+
+    /// Display an error message like interface for the given location
+    pub fn display_arrow(&self, location: &Location, length: usize)
+    {
+        let start_line = location.line.max(3) - 3;
+        let stop_line = location.line - 1;
+
+        let lines = self.raw_text.lines().collect::<Vec<_>>();
+        for i in start_line..=stop_line
+        {
+            println!("{:5}  {}", format!("{}", i + 1), lines[i]);
+        }
+
+        print!("      ");
+
+        for _ in 0..location.column
+        {
+            print!(" ");
+        }
+
+        for _ in 0..length
+        {
+            print!("^");
+        }
+
+        println!();
+    }
+}
+
+/// File Token Iterator
+pub struct FileTokenIterator<'a>
+{
+    i: usize,
+    file: &'a FileManager
+}
+
+impl<'a> std::iter::Iterator for FileTokenIterator<'a>
+{
+    type Item = &'a Token;
+
+    fn next(&mut self) -> Option<Self::Item>
+    {
+        self.file.tokens.as_ref().map(|vector| {self.i += 1; vector.get(self.i - 1) }).flatten()
+    }
 }

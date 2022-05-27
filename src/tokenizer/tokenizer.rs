@@ -17,6 +17,10 @@ pub fn convert_to_token_type(s: String) -> TokenType
     {
         TokenType::IntegerLiteral(number)
     }
+    else if s.starts_with("#")
+    {
+        TokenType::PreprocessorDirective(s)
+    }
     else if SINGLE_CHAR_SYMBOLS.contains(&s.as_str()) || DOUBLE_CHAR_SYMBOLS.contains(&s.as_str())
     {
         TokenType::Symbol(s)
@@ -34,8 +38,6 @@ pub fn push_token(current: &mut String, last_location: &mut Option<Location>, re
     {
         result.push(Token::construct(convert_to_token_type(current.clone()), last_location.take().unwrap()));
         *current = String::new();
-
-        println!("{}", result.last().unwrap());
     }
 }
 
@@ -48,6 +50,9 @@ pub fn tokenize(file: &FileManager) -> CompilerResult<Vec<Token>>
 
     let mut line_count = 1;
     let mut in_multiline_comment = false;
+    // TODO: Add string and character tokenization
+    // let mut in_string = false;
+    // let mut in_character = false;
 
     for line in file.raw_text.lines()
     {

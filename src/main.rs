@@ -29,6 +29,7 @@ fn main()
             Err(e) => 
             {
                 eprintln!("Compiler Error:\n{}", e);
+                e.output_more(&mut compiler_instance);
             }
         }
     }

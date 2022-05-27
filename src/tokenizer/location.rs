@@ -2,9 +2,9 @@
 #[derive(Debug, Clone)]
 pub struct Location
 {
-    filename: String,
-    line: usize,
-    column: usize
+    pub filename: String,
+    pub line: usize,
+    pub column: usize
 }
 
 impl std::fmt::Display for Location

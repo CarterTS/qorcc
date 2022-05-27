@@ -65,7 +65,13 @@ impl<'a> Compiler<'a>
         // Tokenize the file
         file.tokenize()?;
 
-        for token in file.tokens.as_ref().unwrap()
+        // We will now take a copy of the file out of the mapping
+        let owned_file = file.clone();
+
+        // Pass the file on to the preprocessor
+        let tokens = preprocessor::preprocess(self, &owned_file)?;
+
+        for token in tokens
         {
             println!("{}", token);
         }
