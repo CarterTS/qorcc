@@ -8,6 +8,7 @@ pub enum TokenType
     Identifier(String),
     IntegerLiteral(u64),
     StringLiteral(String),
+    CharacterLiteral(String),
     Symbol(String),
 }
 
@@ -21,6 +22,7 @@ impl std::fmt::Display for TokenType
             TokenType::Identifier(name) => write!(f, "Identifier({})", name),
             TokenType::IntegerLiteral(int) => write!(f, "IntegerLiteral({})", int),
             TokenType::StringLiteral(string) => write!(f, "StringLiteral({})", string),
+            TokenType::CharacterLiteral(character) => write!(f, "CharacterLiteral({})", character),
             TokenType::Symbol(symbol) => write!(f, "Symbol({})", symbol),
         }
     }

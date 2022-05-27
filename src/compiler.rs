@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use std::fs::File;
-use std::hash::Hash;
 
 use super::codegen;
 use super::parser;

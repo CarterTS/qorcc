@@ -30,7 +30,7 @@ pub fn convert_to_token_type(s: String) -> TokenType
 /// Push a token to the result vector
 pub fn push_token(current: &mut String, last_location: &mut Option<Location>, result: &mut Vec<Token>)
 {
-    if current.len() != 0
+    if current.len() != 0 && last_location.is_some()
     {
         result.push(Token::construct(convert_to_token_type(current.clone()), last_location.take().unwrap()));
         *current = String::new();
@@ -47,6 +47,7 @@ pub fn tokenize(file: &FileManager) -> CompilerResult<Vec<Token>>
     trace!("Tokenizing {}", file.filename);
 
     let mut line_count = 1;
+    let mut in_multiline_comment = false;
 
     for line in file.raw_text.lines()
     {
@@ -54,11 +55,29 @@ pub fn tokenize(file: &FileManager) -> CompilerResult<Vec<Token>>
         let mut last_location: Option<Location> = None;
         let mut current = String::new();
 
-        let line = line.split("//").nth(0).unwrap();
-
         for c in line.chars()
         {
             column_count += 1;
+
+            if in_multiline_comment
+            {
+                if c == '*' && current.len() == 0
+                {
+                    current += "*";
+                }
+                else if c == '/' && current == "*"
+                {
+                    current = String::new();
+                    last_location = None;
+                    in_multiline_comment = false;
+                }
+                else
+                {
+                    current = String::new();
+                }
+                continue;
+            }
+
             if c == ' ' || c == '\t' || c == '\r' || c == '\n'
             {
                 push_token(&mut current, &mut last_location, &mut result);
@@ -71,6 +90,20 @@ pub fn tokenize(file: &FileManager) -> CompilerResult<Vec<Token>>
 
                 let mut next_current = current.clone();
                 next_current.push(c);
+
+                if next_current == "/*"
+                {
+                    current = String::new();
+                    last_location = None;
+                    in_multiline_comment = true;
+                    continue;
+                }
+
+                if next_current == "//"
+                {
+                    current = String::new();
+                    break;
+                }
 
                 if ONLY_DOUBLE_CHAR_SYMBOLS.contains(&current.as_str()) || ONLY_SINGLE_CHAR_SYMBOLS.contains(&s) || 
                     (SINGLE_CHAR_SYMBOLS.contains(&s) && !DOUBLE_CHAR_SYMBOLS.contains(&next_current.as_str())) || 
