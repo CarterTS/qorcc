@@ -19,6 +19,14 @@ impl std::fmt::Display for CompilerError
     }
 }
 
+impl std::convert::From<PreprocessorError> for CompilerError
+{
+    fn from(error: PreprocessorError) -> Self
+    {
+        CompilerError::PreprocessorError(error)
+    }
+}
+
 impl CompilerError
 {
     pub fn output_more(self, compiler: &mut Compiler)

@@ -61,7 +61,7 @@ impl FileManager
         let lines = self.raw_text.lines().collect::<Vec<_>>();
         for i in start_line..=stop_line
         {
-            println!("{:5}  {}", format!("{}", i + 1), lines[i]);
+            println!("{:5}  {}", format!("{}", i + 1), lines.get(i).unwrap_or(&""));
         }
 
         print!("      ");
