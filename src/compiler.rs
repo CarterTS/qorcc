@@ -31,6 +31,8 @@ impl<'a> Compiler<'a>
     {
         if !self.loaded_files.contains_key(filename)
         {
+            trace!("Loading File {}", filename);
+
             self.active_filenames.push(String::from(filename));
             let manager = FileManager::open_new(self.active_filenames.last().unwrap())?;
 
@@ -60,16 +62,11 @@ impl<'a> Compiler<'a>
         trace!("Compiling file {}", filename);
 
         // Open the file, or return a BadFilename error
-        let file = self.get_file_manager(filename)?;
-        
-        // Tokenize the file
-        file.tokenize()?;
-
-        // We will now take a copy of the file out of the mapping
-        let owned_file = file.clone();
+        self.get_file_manager(filename)?;
 
         // Pass the file on to the preprocessor
-        let tokens = preprocessor::preprocess(self, &owned_file)?;
+        let mut context = preprocessor::PreprocessorContext::with_compiler(self);
+        let tokens = context.preprocess(filename)?;
 
         for token in tokens
         {

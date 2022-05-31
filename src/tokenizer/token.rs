@@ -52,7 +52,8 @@ impl TokenType
 pub struct Token
 {
     pub token_type: TokenType,
-    pub location: Location
+    pub location: Location,
+    pub original_location: Option<Location>
 }
 
 impl Token
@@ -62,7 +63,8 @@ impl Token
         Self
         {
             token_type: TokenType::EndOfFile,
-            location
+            location,
+            original_location: None,
         }
     }
 
@@ -71,7 +73,8 @@ impl Token
         Self
         {
             token_type,
-            location
+            location,
+            original_location: None,
         }
     }
 
@@ -93,6 +96,11 @@ impl Token
     pub fn is_preprocessor_directive(&self) -> bool
     {
         matches!(self.token_type, TokenType::PreprocessorDirective(_))
+    }
+
+    pub fn get_original(&self) -> &Location
+    {
+        self.original_location.as_ref().unwrap_or(&self.location)
     }
 }
 

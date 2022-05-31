@@ -5,6 +5,7 @@ pub struct PreprocessorError
 {
     pub error: PreprocessorErrorType,
     pub location: Location,
+    pub original_location: Option<Location>,
     pub arrow_length: usize
 }
 
@@ -22,7 +23,14 @@ impl std::fmt::Display for PreprocessorError
             PreprocessorErrorType::SyntaxError(text) => write!(f, "Syntax Error {}", text)?,
         }
 
-        write!(f, " at {}", self.location)
+        write!(f, " at {}", self.location)?;
+
+        if let Some(original) = &self.original_location
+        {
+            write!(f, " in macro expansion at {}", original)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -34,7 +42,8 @@ impl PreprocessorError
         {
             location: token.location.clone(),
             error: PreprocessorErrorType::SyntaxError(error),
-            arrow_length: token.code_styled().len()
+            original_location: token.original_location.clone(),
+            arrow_length: token.code_styled().len(),
         }
     }
 
@@ -67,5 +76,34 @@ impl PreprocessorError
         {
             Err(PreprocessorError::syntax_error(format!("Expected identifier, got {}", token.code_styled()), &token))
         }
+    }
+
+    pub fn expect_string_literal(token: Option<&Token>) -> Result<Token, PreprocessorError>
+    {
+        let token = PreprocessorError::prevent_eof(token)?;
+
+        if let TokenType::StringLiteral(_) = &token.token_type
+        {
+            Ok(token)
+        }
+        else
+        {
+            Err(PreprocessorError::syntax_error(format!("Expected string literal, got {}", token.code_styled()), &token))
+        }
+    }
+
+    pub fn expect_symbol(token: Option<&Token>, symbol: &str) -> Result<(), PreprocessorError>
+    {
+        let token = PreprocessorError::prevent_eof(token)?;
+
+        if let TokenType::Symbol(token_symbol) = &token.token_type
+        {
+            if token_symbol == symbol
+            {
+                return Ok(());
+            }
+        }
+
+        Err(PreprocessorError::syntax_error(format!("Expected {}, got {}", symbol, token.code_styled()), &token))
     }
 }

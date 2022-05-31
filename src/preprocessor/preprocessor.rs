@@ -1,10 +1,9 @@
 use std::collections::HashMap;
-use std::hash::Hash;
+use std::path::PathBuf;
 
 use crate::compiler::Compiler;
 use crate::preprocessor::PreprocessorError;
 use crate::tokenizer::Token;
-use crate::tokenizer::FileManager;
 use crate::errors::*;
 use crate::tokenizer::TokenType;
 
@@ -13,14 +12,16 @@ use crate::tokenizer::TokenType;
 pub enum MacroReplacements
 {
     None,
-    DirectReplacement(Vec<Token>)
+    DirectReplacement(Vec<Token>),
+    FunctionLikeReplacement(Vec<Token>, Vec<Token>)
 }
 
 /// Preprocessor Context
 pub struct PreprocessorContext<'a, 'b>
 {
     compiler: &'a mut Compiler<'b>,
-    defines: HashMap<String, MacroReplacements>
+    defines: HashMap<String, MacroReplacements>,
+    filename_stack: Vec<String>
 }
 
 impl<'a, 'b> PreprocessorContext<'a, 'b>
@@ -30,8 +31,202 @@ impl<'a, 'b> PreprocessorContext<'a, 'b>
         Self
         {
             compiler,
-            defines: HashMap::new()
+            defines: HashMap::new(),
+            filename_stack: Vec::new()
         }
+    }
+
+    /// Find the filename in the given context
+    pub fn search_include_paths(&self, filename: &str) -> CompilerResult<String>
+    {
+        if let Some(Some(last_path)) = self.filename_stack.last().map(|v| std::path::Path::new(v).parent())
+        {
+            let p = std::path::Path::new(last_path.to_str().unwrap());
+            let this_path = std::path::Path::join(p, filename);
+
+            if this_path.exists()
+            {
+                return Ok(this_path.to_str().unwrap().to_string());
+            }
+        }
+
+        Ok(filename.to_string())
+    }
+
+    /// Include a file
+    pub fn include_file(&mut self, filename: &str) -> CompilerResult<Vec<Token>>
+    {
+        let path = self.search_include_paths(filename)?;
+        
+        let v = self.preprocess(&path)?;
+
+        // We need to make sure that the end of file token isn't passed along
+        let final_tokens = v.iter().map_while(|v| if !v.is_eof() { Some(v.clone()) } else { None }).collect::<Vec<Token>>();
+
+        Ok(final_tokens)
+    }
+
+    /// Preprocess a file into a sequence of tokens, and repeat until no transformation is performed
+    pub fn preprocess(&mut self, filename: &str) -> CompilerResult<Vec<Token>>
+    {
+        trace!("Preprocessing file {}", filename);
+
+        // Make sure the file is tokenized
+        self.compiler.get_file_manager(filename)?.tokenize()?;
+
+        // Get the FileManager for that file
+        let file = self.compiler.get_file_manager(filename)?.clone();
+        self.filename_stack.push(filename.to_string());
+
+        let result = self.preprocess_tokens(file.iter())?;
+
+        if self.filename_stack.pop() != Some(filename.to_string())
+        {
+            unreachable!()
+        }
+
+        Ok(result)
+    }
+
+    pub fn preprocess_tokens<'x, I: Iterator<Item = &'x Token>>(&mut self, iterator: I) -> CompilerResult<Vec<Token>>
+    {
+        let mut result = Vec::new();
+
+        let mut peekable_iter = iterator.peekable();
+
+        while let Some(peeked_next) = peekable_iter.peek()
+        {
+            let current_line = peeked_next.location.line;
+
+            if let TokenType::PreprocessorDirective(directive) = &peeked_next.token_type
+            {
+                match directive.as_str()
+                {
+                    "#define" =>
+                    {
+                        // Step to the next symbol
+                        peekable_iter.next();
+
+                        // Get the identifier name
+                        let identifier = PreprocessorError::expect_identifier(peekable_iter.next())?.code_styled();
+
+                        // Determine the sequence of tokens which this expands to by finding the tokens remaining on the line
+                        let mut macro_tokens = Vec::new();
+                        while let Some(t) = peekable_iter.peek()
+                        {
+                            if t.is_eof() { break; }
+                            if t.location.line == current_line
+                            {
+                                macro_tokens.push(peekable_iter.next().unwrap().clone());
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+
+                        // If there are no tokens remaining in the line, we are just defining the macro
+                        if macro_tokens.len() == 0
+                        {
+                            self.register_macro_empty(identifier);
+                        }
+                        // If the sequence begins with a left paren, then we are starting a function like macro
+                        else if TokenType::Symbol(String::from("(")) == macro_tokens[0].token_type
+                        {
+                            let mut peekable_iter = macro_tokens[1..].iter().peekable();
+
+                            let mut arguments = Vec::new();
+
+                            loop
+                            {
+                                // Take the next token, which should be an identifier, and add it to the list of arguments
+                                arguments.push(PreprocessorError::expect_identifier(peekable_iter.next())?);
+
+                                // Now we have a choice
+                                let next_token = PreprocessorError::prevent_eof(peekable_iter.next())?;
+                                // If the next symbol is a close paren, break out and use the remainder of the iterator as the pattern
+                                if TokenType::Symbol(String::from(")")) == next_token.token_type
+                                {
+                                    break;
+                                }
+                                // Otherwise, it must be a comma, in which case we will loop back to the top
+                                else
+                                {
+                                    PreprocessorError::expect_symbol(Some(&next_token.clone()), ",")?;
+                                }
+                            }
+
+                            let mut pattern = Vec::new();
+
+                            for token in peekable_iter
+                            {
+                                pattern.push(token.clone());
+                            }
+
+                            self.register_function_like_macro(identifier, arguments, pattern);
+                        }
+                        // Otherwise, we will register the sequence of tokens as the macro
+                        else
+                        {
+                            self.register_direct_replace_macro(identifier, macro_tokens);
+                        }
+                    },
+                    "#include" =>
+                    {
+                        // Step to the next symbol
+                        peekable_iter.next();
+
+                        // Next there should be a string literal with the name of the imported file
+                        let filename = PreprocessorError::expect_string_literal(peekable_iter.next())?;
+
+                        // Include the file by adding it to the file processing stack
+                        if let TokenType::StringLiteral(filename) = filename.token_type
+                        {
+                            result.append(&mut self.include_file(&filename)?);
+                        }
+                        else
+                        {
+                            unreachable!()
+                        }
+                    },
+                    _ => {return Err(PreprocessorError::syntax_error(format!("Unknown directive {}", directive),  &peeked_next).into())}
+                }
+                
+                continue;
+            }
+            else if let TokenType::Identifier(identifier) = &peeked_next.token_type
+            {
+                if let Some(expand_to) = self.defines.get(identifier)
+                {
+                    let orig_location = peekable_iter.next().unwrap().get_original();
+
+                    match expand_to
+                    {
+                        MacroReplacements::DirectReplacement(tokens) => 
+                        {
+                            let mut new_tokens = tokens.clone();
+
+                            for t in &mut new_tokens
+                            {
+                                t.original_location = Some(orig_location.clone());
+                            }
+
+                            result.append(&mut new_tokens);
+                        },
+                        MacroReplacements::FunctionLikeReplacement(_arguments, _tokens) =>
+                        {
+                            todo!()
+                        },
+                        _ => {}
+                    }
+                    continue;
+                }
+            }
+
+            result.push(peekable_iter.next().unwrap().clone());
+        }
+
+        Ok(result)
     }
 
     pub fn register_macro_empty(&mut self, name: String)
@@ -43,81 +238,10 @@ impl<'a, 'b> PreprocessorContext<'a, 'b>
     {
         self.defines.insert(name, MacroReplacements::DirectReplacement(tokens));
     }
-}
 
-/// Preprocess a sequence of tokens into another sequence of tokens, this takes a compiler object as context as it must be able to reference other already tokenized files
-pub fn preprocess(compiler: &mut Compiler, file: &FileManager) -> Result<Vec<Token>, PreprocessorError>
-{
-    let mut context = PreprocessorContext::with_compiler(compiler);
-
-    let mut result = Vec::new();
-
-    let mut peekable_iter = file.iter().peekable();
-
-    while let Some(peeked_next) = peekable_iter.peek()
+    pub fn register_function_like_macro(&mut self, name: String, arguments: Vec<Token>, tokens: Vec<Token>)
     {
-        let current_line = peeked_next.location.line;
-
-        if let TokenType::PreprocessorDirective(directive) = &peeked_next.token_type
-        {
-            match directive.as_str()
-            {
-                "#define" =>
-                {
-                    // Step to the next symbol
-                    peekable_iter.next();
-
-                    // Get the identifier name
-                    let identifier = PreprocessorError::expect_identifier(peekable_iter.next())?.code_styled();
-
-                    // Determine the sequence of tokens which this expands to by finding the tokens remaining on the line
-                    let mut macro_tokens = Vec::new();
-                    while let Some(t) = peekable_iter.peek()
-                    {
-                        if t.is_eof() { break; }
-                        if t.location.line == current_line
-                        {
-                            macro_tokens.push(peekable_iter.next().unwrap().clone());
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-
-                    // If there are no tokens remaining in the line, we are just defining the macro
-                    if macro_tokens.len() == 0
-                    {
-                        context.register_macro_empty(identifier);
-                    }
-                    // Otherwise, we will register the sequence of tokens as the macro
-                    else
-                    {
-                        context.register_direct_replace_macro(identifier, macro_tokens);
-                    }
-                },
-                _ => {return Err(PreprocessorError::syntax_error(format!("Error"),  &peeked_next))}
-            }
-            
-            continue;
-        }
-        else if let TokenType::Identifier(identifier) = &peeked_next.token_type
-        {
-            if let Some(expand_to) = context.defines.get(identifier)
-            {
-                peekable_iter.next();
-
-                match expand_to
-                {
-                    MacroReplacements::DirectReplacement(tokens) => result.append(&mut tokens.clone()),
-                    _ => {}
-                }
-                continue;
-            }
-        }
-
-        result.push(peekable_iter.next().unwrap().clone());
+        self.defines.insert(name, MacroReplacements::FunctionLikeReplacement(arguments, tokens));
     }
-
-    Ok(result)
 }
+

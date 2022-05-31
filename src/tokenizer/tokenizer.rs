@@ -21,6 +21,11 @@ pub fn convert_to_token_type(s: String) -> TokenType
     {
         TokenType::PreprocessorDirective(s)
     }
+    else if s.starts_with("\"") && s.ends_with("\"")
+    {
+        let l = s.len();
+        TokenType::StringLiteral(s[1..l-1].to_string())
+    }
     else if SINGLE_CHAR_SYMBOLS.contains(&s.as_str()) || DOUBLE_CHAR_SYMBOLS.contains(&s.as_str())
     {
         TokenType::Symbol(s)
