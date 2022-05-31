@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
-use crate::{preprocessor::PreprocessorError, compiler::Compiler};
+use crate::{preprocessor::PreprocessorError, compiler::Compiler, parser::ParseError};
 pub enum CompilerError
 {
     BadFilename(String),
-    PreprocessorError(PreprocessorError)
+    PreprocessorError(PreprocessorError),
+    ParseError(ParseError)
 }
 
 impl std::fmt::Display for CompilerError
@@ -14,7 +15,8 @@ impl std::fmt::Display for CompilerError
         match self
         {
             CompilerError::BadFilename(name) => write!(f, "Unable to open file {}", name),
-            CompilerError::PreprocessorError(error) => write!(f, "Preprocessor error: {}", error)
+            CompilerError::PreprocessorError(error) => write!(f, "Preprocessor error: {}", error),
+            CompilerError::ParseError(error) => write!(f, "Preprocessor error: {}", error)
         }
     }
 }
@@ -34,6 +36,13 @@ impl CompilerError
         match self
         {
             CompilerError::PreprocessorError(error) =>
+            {
+                if let Ok(file) = compiler.get_file_manager(&error.location.filename)
+                {
+                    file.display_arrow(&error.location, error.arrow_length);
+                }
+            },
+            CompilerError::ParseError(error) =>
             {
                 if let Ok(file) = compiler.get_file_manager(&error.location.filename)
                 {

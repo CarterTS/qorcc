@@ -65,13 +65,20 @@ impl<'a> Compiler<'a>
         self.get_file_manager(filename)?;
 
         // Pass the file on to the preprocessor
-        let mut context = preprocessor::PreprocessorContext::with_compiler(self);
-        let tokens = context.preprocess(filename)?;
+        let mut preprocessor_context = preprocessor::PreprocessorContext::with_compiler(self);
+        let tokens = preprocessor_context.preprocess(filename)?;
 
-        for token in tokens
+        // Display the preprocessed tokens
+        for token in &tokens
         {
             println!("{}", token);
         }
+
+        // Parse the token stream
+        let mut parser_context = parser::Parser::from_stream(tokens);
+        let tree = parser_context.parse()?;
+
+        tree.display();
         
         Ok(())
     }
