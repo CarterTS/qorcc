@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use super::Location;
 
 /// Token types and their respective associated data
