@@ -20,7 +20,8 @@ pub struct PreprocessorContext<'a, 'b>
 {
     compiler: &'a mut Compiler<'b>,
     defines: HashMap<String, MacroReplacements>,
-    filename_stack: Vec<String>
+    filename_stack: Vec<String>,
+    if_stack: Vec<bool>
 }
 
 impl<'a, 'b> PreprocessorContext<'a, 'b>
@@ -31,8 +32,15 @@ impl<'a, 'b> PreprocessorContext<'a, 'b>
         {
             compiler,
             defines: HashMap::new(),
-            filename_stack: Vec::new()
+            filename_stack: Vec::new(),
+            if_stack: Vec::new()
         }
+    }
+
+    /// Return true if the value is defined
+    pub fn is_defined(&self, identifier: &str) -> bool
+    {
+        self.defines.contains_key(identifier)
     }
 
     /// Find the filename in the given context
@@ -93,9 +101,28 @@ impl<'a, 'b> PreprocessorContext<'a, 'b>
 
         let mut peekable_iter = iterator.peekable();
 
-        while let Some(peeked_next) = peekable_iter.peek()
+        while let Some(mut peeked_next) = peekable_iter.peek()
         {
             let current_line = peeked_next.location.line;
+            if !self.if_stack.iter().all(|v| *v)
+            {
+                loop
+                {
+                    let next = PreprocessorError::prevent_eof(peekable_iter.peek().map(|v| *v))?;
+
+                    if next.token_type == TokenType::PreprocessorDirective(String::from("#ifdef")) ||
+                       next.token_type == TokenType::PreprocessorDirective(String::from("#ifndef")) ||
+                       next.token_type == TokenType::PreprocessorDirective(String::from("#else")) ||
+                       next.token_type == TokenType::PreprocessorDirective(String::from("#endif"))
+                    {
+                        break;
+                    }
+
+                    peekable_iter.next();
+                }
+
+                peeked_next = peekable_iter.peek().unwrap();
+            }
 
             if let TokenType::PreprocessorDirective(directive) = &peeked_next.token_type
             {
@@ -186,6 +213,52 @@ impl<'a, 'b> PreprocessorContext<'a, 'b>
                         else
                         {
                             unreachable!()
+                        }
+                    },
+                    "#ifdef" =>
+                    {
+                        // Step to the next symbol
+                        peekable_iter.next();
+
+                        // Get the identifier name
+                        let identifier = PreprocessorError::expect_identifier(peekable_iter.next())?.code_styled();
+                    
+                        // Push the identifier being defined to the if stack
+                        self.if_stack.push(self.is_defined(&identifier));
+                    },
+                    "#ifndef" =>
+                    {
+                        // Step to the next symbol
+                        peekable_iter.next();
+
+                        // Get the identifier name
+                        let identifier = PreprocessorError::expect_identifier(peekable_iter.next())?.code_styled();
+
+                        // Push the inverse of the identifier being defined to the if stack
+                        self.if_stack.push(!self.is_defined(&identifier));
+                    },
+                    "#else" =>
+                    {
+                        // Step to the next symbol
+                        let token = peekable_iter.next().unwrap();
+
+                        if let Some(last_if) = self.if_stack.pop()
+                        {
+                            self.if_stack.push(!last_if);
+                        }
+                        else
+                        {
+                            return Err(PreprocessorError::syntax_error(format!("else directive cannot be used outside of a preprocessor if statement"), &token).into());
+                        }
+                    },
+                    "#endif" =>
+                    {
+                        // Step to the next symbol
+                        let token = peekable_iter.next().unwrap();
+
+                        if self.if_stack.pop().is_none()
+                        {
+                            return Err(PreprocessorError::syntax_error(format!("Unexpected endif directive"), &token).into());
                         }
                     },
                     _ => {return Err(PreprocessorError::syntax_error(format!("Unknown directive {}", directive),  &peeked_next).into())}
