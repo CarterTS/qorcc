@@ -43,6 +43,16 @@ impl<'a, 'b> PreprocessorContext<'a, 'b>
         self.defines.contains_key(identifier)
     }
 
+
+    /// Undefine an identifier
+    pub fn undefine(&mut self, identifier: &str)
+    {
+        if self.defines.remove(identifier).is_none()
+        {
+            warn!("Undefining {}, which is not defined", identifier);
+        }
+    }
+
     /// Find the filename in the given context
     pub fn search_include_paths(&self, filename: &str) -> CompilerResult<String>
     {
@@ -214,6 +224,17 @@ impl<'a, 'b> PreprocessorContext<'a, 'b>
                         {
                             unreachable!()
                         }
+                    },
+                    "#undef" =>
+                    {
+                        // Step to the next symbol
+                        peekable_iter.next();
+
+                        // Get the identifier name
+                        let identifier = PreprocessorError::expect_identifier(peekable_iter.next())?.code_styled();
+
+                        self.undefine(&identifier);
+
                     },
                     "#ifdef" =>
                     {
