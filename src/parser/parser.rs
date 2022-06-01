@@ -64,11 +64,29 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
         let name = ParseError::expect_named_identifier(self.stream.next(), "function name")?.code_styled();
 
         ParseError::expect_symbol(self.stream.next(), "(")?;
+
+        let mut arguments = Vec::new();
+
+        while Some(&TokenType::Symbol(String::from(")"))) != self.stream.peek().map(|v| &v.token_type)
+        {
+            let arg_type = self.parse_type()?;
+            let arg_name = ParseError::expect_named_identifier(self.stream.next(), "argument name")?.code_styled();
+
+            arguments.push((arg_name, arg_type));
+
+            if Some(&TokenType::Symbol(String::from(","))) != self.stream.peek().map(|v| &v.token_type)
+            {
+                break;
+            }
+            
+            ParseError::expect_symbol(self.stream.next(), ",")?;
+        }
+
         ParseError::expect_symbol(self.stream.next(), ")")?;
         
         let statement = self.parse_statement()?;
 
-        Ok(ParseTreeNode::Function { name: name, child: Box::new(statement), return_type })
+        Ok(ParseTreeNode::Function { name: name, child: Box::new(statement), return_type, arguments })
     }
 
     /// Parse a statement

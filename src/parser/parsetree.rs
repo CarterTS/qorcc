@@ -7,7 +7,7 @@ use super::*;
 pub enum ParseTreeNode
 {
     CompilationUnit{children: Vec<ParseTreeNode>},
-    Function{name: String, return_type: ValueType, child: Box<ParseTreeNode>},
+    Function{name: String, return_type: ValueType, arguments: Vec<(String, ValueType)>, child: Box<ParseTreeNode>},
     StatementBlock{children: Vec<ParseTreeNode>},
     ReturnStatement{child: Option<Box<ParseTreeNode>>},
     ConstantExpression(Value)
@@ -60,10 +60,27 @@ impl std::fmt::Display for ParseTreeNode
         match &self
         {
             ParseTreeNode::CompilationUnit { .. } => write!(f, "CompilationUnit"),
-            ParseTreeNode::Function { name, return_type, .. } => write!(f, "Function {} -> {}", name, return_type),
+            ParseTreeNode::Function { name, return_type, arguments, .. } => write!(f, "Function {}({}) -> {}", name, render_arguments(arguments), return_type),
             ParseTreeNode::StatementBlock { .. } => write!(f, "StatementBlock"),
             ParseTreeNode::ReturnStatement { .. } => write!(f, "ReturnStatement"),
             ParseTreeNode::ConstantExpression(value) => write!(f, "Value {}", value),
         }
     }
+}
+
+fn render_arguments(arguments: &Vec<(String, ValueType)>) -> String
+{
+    let mut result = String::new();
+
+    for (arg_name, arg_type) in arguments
+    {
+        if result.len() > 0
+        {
+            result += ", ";
+        }
+
+        result += &format!("{} {}", arg_name, arg_type);
+    }
+
+    result
 }

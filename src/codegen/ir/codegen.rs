@@ -28,7 +28,7 @@ pub fn parse_tree_to_ir(tree: ParseTreeNode) -> CompilerResult<IR>
 /// Convert a function parse tree node into an IRFunction
 pub fn parse_tree_function_to_ir(tree: ParseTreeNode) -> CompilerResult<IRFunction>
 {
-    if let ParseTreeNode::Function { name, return_type, child } = tree
+    if let ParseTreeNode::Function { name, return_type, child, .. } = tree
     {
         Ok(IRFunction::with_statement(name, return_type, *child))
     }
