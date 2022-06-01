@@ -28,8 +28,12 @@ impl AssemblyCodeGenerator
 
         for function in &self.ir.functions
         {
+            if result.len() > 0
+            {  
+                result += "\n";
+            }
+            
             result += &self.emit_function(function)?;
-            result += "\n\n";
         }
 
         Ok(result)

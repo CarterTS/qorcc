@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::io::Write;
+use std::path::Path;
 
 use super::codegen;
 use super::parser;
@@ -101,7 +103,20 @@ impl<'a> Compiler<'a>
         let asm_generator = codegen::AssemblyCodeGenerator::from_ir(ir);
         let asm = asm_generator.codegen()?;
 
-        println!("{}", asm);
+        // Display the assembly output if requested
+        if self.settings.dump_assembly
+        {
+            print!("{}", asm);
+        }
+        
+        // Finally, we get the name of the output file, and write the generated assembly output if the no-out-file flag is not set
+        if !self.settings.supress_output
+        {
+            let filename = Path::new(&filename).file_name().unwrap().to_str().unwrap().split(".").nth(0).unwrap();
+            let mut f = std::fs::File::create(format!("{}.s", filename)).unwrap();
+
+            f.write_all(asm.as_bytes()).unwrap();
+        }
 
         Ok(())
     }
