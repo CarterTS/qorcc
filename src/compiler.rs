@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use crate::codegen::intermediate_representation;
-
 use super::codegen;
 use super::parser;
 use super::preprocessor;

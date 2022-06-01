@@ -30,9 +30,7 @@ pub fn parse_tree_function_to_ir(tree: ParseTreeNode) -> CompilerResult<IRFuncti
 {
     if let ParseTreeNode::Function { name, return_type, child } = tree
     {
-        let mut function = IRFunction::with_statement(name, return_type, *child);
-
-        Ok(function)
+        Ok(IRFunction::with_statement(name, return_type, *child))
     }
     else
     {

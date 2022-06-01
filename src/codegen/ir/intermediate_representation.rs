@@ -17,6 +17,7 @@ impl IR
         }
     }
 
+    #[allow(dead_code)]
     pub fn example() -> Self
     {
         let value = IRValue::Immediate(Value::code_constant(128));
@@ -105,6 +106,7 @@ impl IRBlock
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum IRValue
 {
     Register(usize),
