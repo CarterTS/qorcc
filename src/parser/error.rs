@@ -66,6 +66,20 @@ impl ParseError
         }
     }
 
+    pub fn expect_integer_literal(token: Option<&Token>) -> Result<Token, ParseError>
+    {
+        let token = ParseError::prevent_eof(token)?;
+
+        if let TokenType::IntegerLiteral(_) = &token.token_type
+        {
+            Ok(token)
+        }
+        else
+        {
+            Err(ParseError::syntax_error(format!("Expected integer literal, got {}", token.code_styled()), &token))
+        }
+    }
+
     pub fn expect_identifier(token: Option<&Token>) -> Result<Token, ParseError>
     {
         let token = ParseError::prevent_eof(token)?;
@@ -77,6 +91,20 @@ impl ParseError
         else
         {
             Err(ParseError::syntax_error(format!("Expected identifier, got {}", token.code_styled()), &token))
+        }
+    }
+
+    pub fn expect_named_identifier(token: Option<&Token>, name: &str) -> Result<Token, ParseError>
+    {
+        let token = ParseError::prevent_eof(token)?;
+
+        if let TokenType::Identifier(_) = &token.token_type
+        {
+            Ok(token)
+        }
+        else
+        {
+            Err(ParseError::syntax_error(format!("Expected {}, got {}", name, token.code_styled()), &token))
         }
     }
 

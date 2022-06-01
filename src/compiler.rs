@@ -75,7 +75,7 @@ impl<'a> Compiler<'a>
         }
 
         // Parse the token stream
-        let mut parser_context = parser::Parser::from_stream(tokens);
+        let mut parser_context = parser::Parser::from_stream(tokens.iter());
         let tree = parser_context.parse()?;
 
         tree.display();

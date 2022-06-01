@@ -16,7 +16,7 @@ impl std::fmt::Display for CompilerError
         {
             CompilerError::BadFilename(name) => write!(f, "Unable to open file {}", name),
             CompilerError::PreprocessorError(error) => write!(f, "Preprocessor error: {}", error),
-            CompilerError::ParseError(error) => write!(f, "Preprocessor error: {}", error)
+            CompilerError::ParseError(error) => write!(f, "Parse error: {}", error)
         }
     }
 }
@@ -26,6 +26,14 @@ impl std::convert::From<PreprocessorError> for CompilerError
     fn from(error: PreprocessorError) -> Self
     {
         CompilerError::PreprocessorError(error)
+    }
+}
+
+impl std::convert::From<ParseError> for CompilerError
+{
+    fn from(error: ParseError) -> Self
+    {
+        CompilerError::ParseError(error)
     }
 }
 
