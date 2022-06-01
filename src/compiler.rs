@@ -68,10 +68,14 @@ impl<'a> Compiler<'a>
         let mut preprocessor_context = preprocessor::PreprocessorContext::with_compiler(self);
         let tokens = preprocessor_context.preprocess(filename)?;
 
-        // Display the preprocessed tokens
-        for token in &tokens
+        // Display the preprocessed tokens if requested
+        if self.settings.dump_tokens
         {
-            println!("{}", token);
+            println!("Preprocessed Tokens:");
+            for token in &tokens
+            {
+                println!("   {}", token);
+            }
         }
 
         // Parse the token stream
