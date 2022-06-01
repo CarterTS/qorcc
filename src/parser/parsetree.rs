@@ -7,9 +7,9 @@ use super::*;
 pub enum ParseTreeNode
 {
     CompilationUnit{children: Vec<ParseTreeNode>},
-    Function{name: String, return_type: ValueType, children: Vec<ParseTreeNode>},
+    Function{name: String, return_type: ValueType, child: Box<ParseTreeNode>},
     StatementBlock{children: Vec<ParseTreeNode>},
-    ReturnStatement{children: Vec<ParseTreeNode>},
+    ReturnStatement{child: Option<Box<ParseTreeNode>>},
     ConstantExpression(Value)
 }
 
@@ -40,14 +40,14 @@ impl ParseTreeNode
     }
 
     /// Get a reference to the children if available
-    pub fn get_children(&self) -> Option<&Vec<ParseTreeNode>>
+    pub fn get_children(&self) -> Option<Vec<ParseTreeNode>>
     {
         match self
         {
-            ParseTreeNode::CompilationUnit { children } => Some(&children),
-            ParseTreeNode::Function { children, .. } => Some(&children),
-            ParseTreeNode::StatementBlock { children } => Some(&children),
-            ParseTreeNode::ReturnStatement { children } => Some(&children),
+            ParseTreeNode::CompilationUnit { children } => Some(children.to_vec()),
+            ParseTreeNode::Function { child, .. } => Some(vec![(**child).clone()]),
+            ParseTreeNode::StatementBlock { children } => Some(children.to_vec()),
+            ParseTreeNode::ReturnStatement { child } => child.as_ref().map(|c| vec![(**c).clone()]),
             ParseTreeNode::ConstantExpression(_) => None,
         }
     }

@@ -68,7 +68,7 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
         
         let statement = self.parse_statement()?;
 
-        Ok(ParseTreeNode::Function { name: name, children: vec![statement], return_type })
+        Ok(ParseTreeNode::Function { name: name, child: Box::new(statement), return_type })
     }
 
     /// Parse a statement
@@ -108,7 +108,7 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
 
             ParseError::expect_symbol(self.stream.next(), ";")?;
 
-            Ok(ParseTreeNode::ReturnStatement { children: vec![value] })
+            Ok(ParseTreeNode::ReturnStatement { child: Some(Box::new(value)) })
         }
         else
         {

@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::codegen::intermediate_representation;
+
 use super::codegen;
 use super::parser;
 use super::preprocessor;
@@ -82,7 +84,16 @@ impl<'a> Compiler<'a>
         let mut parser_context = parser::Parser::from_stream(tokens.iter());
         let tree = parser_context.parse()?;
 
-        tree.display();
+        // Display the parse tree if requested
+        if self.settings.dump_parse_tree
+        {
+            tree.display();
+        }
+
+        // Convert to intermediate representation
+        let ir = codegen::parse_tree_to_ir(tree)?;
+
+        ir.display();
         
         Ok(())
     }

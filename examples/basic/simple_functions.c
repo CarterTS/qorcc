@@ -5,7 +5,7 @@ int constant0()
 
 int constant1()
 {
-    return -124;
+    return 124;
 }
 
 int constant2()
