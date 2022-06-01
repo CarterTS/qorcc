@@ -61,6 +61,41 @@ pub enum RawValueType
     Struct(String)
 }
 
+impl RawValueType
+{
+    pub fn make_signed(&self) -> Self
+    {
+        match self
+        {
+            RawValueType::I8 => RawValueType::I8,
+            RawValueType::I16 => RawValueType::I16,
+            RawValueType::I32 => RawValueType::I32,
+            RawValueType::I64 => RawValueType::I64,
+            RawValueType::U8 => RawValueType::I8,
+            RawValueType::U16 => RawValueType::I16,
+            RawValueType::U32 => RawValueType::I32,
+            RawValueType::U64 => RawValueType::I64,
+            _ => panic!(),
+        }
+    }
+
+    pub fn make_unsigned(&self) -> Self
+    {
+        match self
+        {
+            RawValueType::I8 => RawValueType::U8,
+            RawValueType::I16 => RawValueType::U16,
+            RawValueType::I32 => RawValueType::U32,
+            RawValueType::I64 => RawValueType::U64,
+            RawValueType::U8 => RawValueType::U8,
+            RawValueType::U16 => RawValueType::U16,
+            RawValueType::U32 => RawValueType::U32,
+            RawValueType::U64 => RawValueType::U64,
+            _ => panic!(),
+        }
+    }
+}
+
 impl std::fmt::Display for RawValueType
 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result
@@ -79,6 +114,7 @@ impl std::fmt::Display for RawValueType
             RawValueType::Struct(name) => write!(f, "struct {}", name),
         }
     }
+
 }
 
 impl std::convert::From<RawValueType> for ValueType

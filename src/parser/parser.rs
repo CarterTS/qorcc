@@ -131,6 +131,22 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
         }
     }
 
+    /// Parse a base integer type
+    pub fn parse_base_integer_type(&mut self) -> CompilerResult<RawValueType>
+    {
+        // Integral types must be identifiers
+        let token = ParseError::expect_named_identifier(self.stream.next(), "integral type")?;
+
+        match token.code_styled().as_str()
+        {
+            "char" => Ok(RawValueType::I8),
+            "short" => Ok(RawValueType::I16),
+            "int" => Ok(RawValueType::I32),
+            "long" => Ok(RawValueType::I64),
+            _ => Err(ParseError::syntax_error(format!("Expected integral type, got {}", token.code_styled()), &token).into())
+        }
+    }
+
     /// Parse a type from the stream
     pub fn parse_type(&mut self) -> CompilerResult<ValueType>
     {
@@ -150,6 +166,14 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
             "short" => RawValueType::I16,
             "int" => RawValueType::I32,
             "long" => RawValueType::I64,
+            "unsigned" =>
+            {
+                self.parse_base_integer_type()?.make_unsigned()
+            },
+            "signed" =>
+            {
+                self.parse_base_integer_type()?.make_signed()
+            },
             _ => 
             {
                 return Err(ParseError::syntax_error(format!("Expected type, got {}", token.code_styled()), &token).into())
