@@ -91,8 +91,18 @@ impl<'a> Compiler<'a>
         // Convert to intermediate representation
         let ir = codegen::parse_tree_to_ir(tree)?;
 
-        ir.display();
-        
+        // Display the intermediate representation if requested
+        if self.settings.dump_intermediate_representation
+        { 
+            ir.display();
+        }
+
+        // Produce assembly from the intermediate representation
+        let asm_generator = codegen::AssemblyCodeGenerator::from_ir(ir);
+        let asm = asm_generator.codegen()?;
+
+        println!("{}", asm);
+
         Ok(())
     }
 }
