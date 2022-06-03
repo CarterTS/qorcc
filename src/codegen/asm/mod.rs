@@ -1,22 +1,66 @@
 #![allow(dead_code)]
-use super::{IR, IRBlock, IRFunction, IRInstruction};
+use super::{IR, IRBlock, IRFunction, IRInstruction, IRValue};
+
+use std::{collections::HashMap, hash::Hash};
 
 use crate::errors::*;
+
+/// RISC-V Registers
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Register
+{
+    A0,
+    A1,
+    A2, 
+    A3,
+    A4,
+    A5,
+    A6
+}
+
+impl std::fmt::Display for Register
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result
+    {
+        match self
+        {
+            Register::A0 => write!(f, "a0"),
+            Register::A1 => write!(f, "a1"),
+            Register::A2 => write!(f, "a2"),
+            Register::A3 => write!(f, "a3"),
+            Register::A4 => write!(f, "a4"),
+            Register::A5 => write!(f, "a5"),
+            Register::A6 => write!(f, "a6"),
+        }
+    }
+}
 
 /// Assembly Code Generator for RISC-V
 #[derive(Debug, Clone)]
 pub struct AssemblyCodeGenerator
 {
     ir: IR,
+    mapping: HashMap<usize, Register>
 }
 
 impl AssemblyCodeGenerator
 {
     pub fn from_ir(ir: IR) -> Self
     {
+        let mut default_mapping = HashMap::new();
+
+        default_mapping.insert(0, Register::A0);
+        default_mapping.insert(1, Register::A1);
+        default_mapping.insert(2, Register::A2);
+        default_mapping.insert(3, Register::A3);
+        default_mapping.insert(4, Register::A4);
+        default_mapping.insert(5, Register::A5);
+        default_mapping.insert(6, Register::A6);
+
         Self
         {
-            ir
+            ir,
+            mapping: default_mapping
         }
     }
 
@@ -69,17 +113,39 @@ impl AssemblyCodeGenerator
         Ok(result)
     }
 
+    pub fn move_reg_reg(&self, dest: Register, source: Register) -> String
+    {
+        if dest != source
+        {
+            format!("    mv {}, {}\n", dest, source)
+        }
+        else 
+        {
+            String::new()
+        }
+    }
+
+    pub fn move_reg_imm(&self, dest: Register, source: i64) -> String
+    {
+        format!("    li {}, {}\n", dest, source)
+    }
+
+    pub fn move_reg_value(&self, dest: Register, source: IRValue) -> String
+    {
+        match source
+        {
+            super::IRValue::Register(reg) => self.move_reg_reg(Register::A0, *self.mapping.get(&reg).unwrap()),
+            super::IRValue::Immediate(immediate) => self.move_reg_imm(Register::A0, immediate.value as i64),
+        }
+    }
+
     pub fn emit_instruction(&self, inst: &IRInstruction, _block: &IRBlock, _function: &IRFunction) -> CompilerResult<String>
     {
         match inst
         {
             IRInstruction::Return { value } => 
             {
-                match value
-                {
-                    super::IRValue::Register(_) => todo!(),
-                    super::IRValue::Immediate(immediate) => Ok(format!("    li a0, {}\n    ret\n", immediate.value)),
-                }
+                Ok(self.move_reg_value(Register::A0, value.clone()) + "    ret\n")
             },
         }
     }

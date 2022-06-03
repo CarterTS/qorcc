@@ -1,4 +1,6 @@
+use crate::compiler::Compiler;
 use crate::parser::*;
+use crate::tokenizer::*;
 use crate::errors::*;
 
 use super::*;
@@ -28,9 +30,9 @@ pub fn parse_tree_to_ir(tree: ParseTreeNode) -> CompilerResult<IR>
 /// Convert a function parse tree node into an IRFunction
 pub fn parse_tree_function_to_ir(tree: ParseTreeNode) -> CompilerResult<IRFunction>
 {
-    if let ParseTreeNode::Function { name, return_type, child, .. } = tree
+    if let ParseTreeNode::Function { name, return_type, child, arguments, .. } = tree
     {
-        Ok(IRFunction::with_statement(name, return_type, *child))
+        IRFunction::with_statement_and_args(name, return_type, *child, arguments)
     }
     else
     {
@@ -40,22 +42,70 @@ pub fn parse_tree_function_to_ir(tree: ParseTreeNode) -> CompilerResult<IRFuncti
 
 impl IRFunction
 {
-    pub fn with_statement(name: String, return_type: ValueType, statement: ParseTreeNode) -> Self
+    pub fn with_statement_and_args(name: String, return_type: ValueType, statement: ParseTreeNode, arguments: Vec<(String, ValueType, Token)>) -> CompilerResult<Self>
     {
         let mut result = Self
         {
             name,
             return_type,
             blocks: vec![IRBlock::new(0)],
-            current_block: 0
+            current_block: 0,
+            scope_stack: Vec::new(),
+            next_register: 0
         };
 
-        result.add_statement(statement);
+        let scope = IRScope::from_arguments(arguments, &mut result);
 
-        result
+        result.scope_stack.push(scope);
+
+        result.add_statement(statement)?;
+
+        Ok(result)
     }
 
-    pub fn add_statement(&mut self, statement: ParseTreeNode)
+    pub fn get_variable_value(&mut self, expression: ParseTreeNode) -> CompilerResult<IRValue>
+    {
+        if let ParseTreeNode::VariableExpression { name, token } = expression
+        {
+            println!("Trying to dereference token for {}", token);
+            
+            let mut result = None;
+
+            for scope in self.scope_stack.iter().rev()
+            {
+                result = result.or(scope.access_variable(&name));
+                if result.is_some()
+                {
+                    break;
+                }
+            }
+
+            if let Some(result_value) = result
+            {
+                Ok(result_value)
+            }
+            else
+            {
+                Err(CodegenError::compile_error(format!("Variable {} is not defined", name), &token).into())
+            }
+        }
+        else
+        {
+            panic!()
+        }
+    }
+
+    pub fn generate_expression(&mut self, expression: ParseTreeNode) -> CompilerResult<IRValue>
+    {
+        match expression
+        {
+            ParseTreeNode::ConstantExpression{ value, .. } => Ok(IRValue::Immediate(value)),
+            ParseTreeNode::VariableExpression { .. } => self.get_variable_value(expression),
+            _ => todo!()
+        }
+    }
+
+    pub fn add_statement(&mut self, statement: ParseTreeNode) -> CompilerResult<()>
     {
         match statement
         {
@@ -63,15 +113,24 @@ impl IRFunction
             {
                 for child in children
                 {
-                    self.add_statement(child);
+                    self.add_statement(child)?;
                 }
+
+                Ok(())
             },
             ParseTreeNode::ReturnStatement { child } => 
             {
-                if let Some(ParseTreeNode::ConstantExpression(value)) = child.map(|v| *v)
+                if let Some(expression) = child
                 {
-                    self.mut_current_block().add_instruction(IRInstruction::Return { value: IRValue::Immediate(value) });
+                    let value = self.generate_expression(*expression)?;
+                    self.mut_current_block().add_instruction(IRInstruction::Return { value });
                 }
+                else
+                {
+                    self.mut_current_block().add_instruction(IRInstruction::Return { value: IRValue::Immediate(Value::code_constant(0)) });
+                }
+
+                Ok(())
             },
             _ => panic!(),
         }

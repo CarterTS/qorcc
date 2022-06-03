@@ -1,3 +1,4 @@
+use crate::compiler::Compiler;
 use crate::tokenizer::{Token, TokenType};
 use crate::errors::CompilerResult;
 
@@ -19,7 +20,7 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
         }
     }
 
-    /// Parse the roken stream
+    /// Parse the token stream
     pub fn parse(&mut self) -> CompilerResult<ParseTreeNode>
     {
         trace!("Starting Parsing");
@@ -61,7 +62,7 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
     {
         let return_type = self.parse_type()?;
 
-        let name = ParseError::expect_named_identifier(self.stream.next(), "function name")?.code_styled();
+        let name = ParseError::expect_named_identifier(self.stream.next(), "function name")?;
 
         ParseError::expect_symbol(self.stream.next(), "(")?;
 
@@ -70,9 +71,9 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
         while Some(&TokenType::Symbol(String::from(")"))) != self.stream.peek().map(|v| &v.token_type)
         {
             let arg_type = self.parse_type()?;
-            let arg_name = ParseError::expect_named_identifier(self.stream.next(), "argument name")?.code_styled();
+            let arg_name = ParseError::expect_named_identifier(self.stream.next(), "argument name")?;
 
-            arguments.push((arg_name, arg_type));
+            arguments.push((arg_name.code_styled(), arg_type, arg_name));
 
             if Some(&TokenType::Symbol(String::from(","))) != self.stream.peek().map(|v| &v.token_type)
             {
@@ -86,7 +87,7 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
         
         let statement = self.parse_statement()?;
 
-        Ok(ParseTreeNode::Function { name: name, child: Box::new(statement), return_type, arguments })
+        Ok(ParseTreeNode::Function { name: name.code_styled(), child: Box::new(statement), return_type, arguments, name_token: name })
     }
 
     /// Parse a statement
@@ -122,7 +123,7 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
         {
             self.stream.next();
 
-            let value = self.parse_value()?;
+            let value = self.parse_expression()?;
 
             ParseError::expect_symbol(self.stream.next(), ";")?;
 
@@ -134,14 +135,43 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
         }
     }
 
-    /// Parse a value
-    pub fn parse_value(&mut self) -> CompilerResult<ParseTreeNode>
+    /// Parse an expression
+    pub fn parse_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        let number = ParseError::expect_integer_literal(self.stream.next())?;
-
-        if let TokenType::IntegerLiteral(number) = number.token_type
+        // If the next token is an integer literal, parse as such
+        if let Some(TokenType::IntegerLiteral(_)) = self.stream.peek().map(|v| &v.token_type)
         {
-            Ok(ParseTreeNode::ConstantExpression(Value::code_constant(number as u32)))
+            self.parse_integer_value()
+        }
+        else
+        {
+            self.parse_variable_name()
+        }
+    }
+
+    /// Parse an integer value
+    pub fn parse_integer_value(&mut self) -> CompilerResult<ParseTreeNode>
+    {
+        let number_token = ParseError::expect_integer_literal(self.stream.next())?;
+
+        if let TokenType::IntegerLiteral(number) = number_token.token_type
+        {
+            Ok(ParseTreeNode::ConstantExpression{ value: Value::code_constant(number as u32), token: number_token })
+        }
+        else
+        {
+            unreachable!()
+        }
+    }
+
+    /// Parse an identifier variable name (variable name)
+    pub fn parse_variable_name(&mut self) -> CompilerResult<ParseTreeNode>
+    {
+        let name_token = ParseError::expect_named_identifier(self.stream.next(), "variable name")?;
+
+        if let TokenType::Identifier(name) = &name_token.token_type
+        {
+            Ok(ParseTreeNode::VariableExpression{ name: name.clone(), token: name_token })
         }
         else
         {

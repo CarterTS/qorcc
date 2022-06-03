@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use crate::tokenizer::*;
 use crate::parser::*;
 
 /// Intermediate Representation Structure
@@ -17,20 +20,6 @@ impl IR
         }
     }
 
-    #[allow(dead_code)]
-    pub fn example() -> Self
-    {
-        let value = IRValue::Immediate(Value::code_constant(128));
-        let return_inst = IRInstruction::Return { value };
-        let block = IRBlock { label: format!("L0"), instructions: vec![return_inst] };
-        let function = IRFunction { name: format!("main"), return_type: RawValueType::I32.into(), blocks: vec![block], current_block: 0 };
-
-        Self
-        {
-            functions: vec![function]
-        }
-    }
-
     pub fn display(&self)
     {
         println!("Intermediate Representation:");
@@ -42,6 +31,46 @@ impl IR
     }
 }
 
+/// Scope for the Intermediate Representation Code Generation
+#[derive(Debug, Clone)]
+pub struct IRScope
+{
+    variables: HashMap<String, usize>
+}
+
+impl IRScope
+{
+    pub fn new() -> Self
+    {
+        Self
+        {
+            variables: HashMap::new()
+        }
+    }
+
+    pub fn from_arguments(arguments: Vec<(String, ValueType, Token)>, function: &mut IRFunction) -> Self
+    {
+        let mut variables = HashMap::new();
+
+        for (arg_name, _, _) in arguments
+        {
+            let reg = function.alloc_next_register();
+            trace!("Inserting Variable {} into register {}", &arg_name, reg);
+            variables.insert(arg_name, reg);
+        }
+
+        Self
+        {
+            variables
+        }
+    }
+
+    pub fn access_variable(&self, name: &str) -> Option<IRValue>
+    {
+        self.variables.get(name).map(|reg_num| IRValue::Register(*reg_num))
+    }
+}
+
 /// Intermediate Representation Function
 #[derive(Debug, Clone)]
 pub struct IRFunction
@@ -49,7 +78,9 @@ pub struct IRFunction
     pub name: String,
     pub return_type: ValueType,
     pub blocks: Vec<IRBlock>,
-    pub current_block: usize
+    pub current_block: usize,
+    pub scope_stack: Vec<IRScope>,
+    pub next_register: usize,
 }
 
 impl IRFunction
@@ -67,6 +98,12 @@ impl IRFunction
     pub fn mut_current_block(&mut self) -> &mut IRBlock
     {
         &mut self.blocks[self.current_block]
+    }
+
+    pub fn alloc_next_register(&mut self) -> usize
+    {
+        self.next_register += 1;
+        self.next_register - 1
     }
 }
 

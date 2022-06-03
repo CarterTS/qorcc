@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use crate::tokenizer::Token;
+
 use super::*;
 
 /// Parsetree Node Types
@@ -7,10 +9,11 @@ use super::*;
 pub enum ParseTreeNode
 {
     CompilationUnit{children: Vec<ParseTreeNode>},
-    Function{name: String, return_type: ValueType, arguments: Vec<(String, ValueType)>, child: Box<ParseTreeNode>},
+    Function{name: String, return_type: ValueType, arguments: Vec<(String, ValueType, Token)>, child: Box<ParseTreeNode>, name_token: Token },
     StatementBlock{children: Vec<ParseTreeNode>},
     ReturnStatement{child: Option<Box<ParseTreeNode>>},
-    ConstantExpression(Value)
+    ConstantExpression{value: Value, token: Token},
+    VariableExpression{name: String, token: Token},
 }
 
 impl ParseTreeNode
@@ -48,7 +51,8 @@ impl ParseTreeNode
             ParseTreeNode::Function { child, .. } => Some(vec![(**child).clone()]),
             ParseTreeNode::StatementBlock { children } => Some(children.to_vec()),
             ParseTreeNode::ReturnStatement { child } => child.as_ref().map(|c| vec![(**c).clone()]),
-            ParseTreeNode::ConstantExpression(_) => None,
+            ParseTreeNode::ConstantExpression{ .. } => None,
+            ParseTreeNode::VariableExpression { .. } => None,
         }
     }
 }
@@ -63,16 +67,17 @@ impl std::fmt::Display for ParseTreeNode
             ParseTreeNode::Function { name, return_type, arguments, .. } => write!(f, "Function {}({}) -> {}", name, render_arguments(arguments), return_type),
             ParseTreeNode::StatementBlock { .. } => write!(f, "StatementBlock"),
             ParseTreeNode::ReturnStatement { .. } => write!(f, "ReturnStatement"),
-            ParseTreeNode::ConstantExpression(value) => write!(f, "Value {}", value),
+            ParseTreeNode::ConstantExpression{ value, .. } => write!(f, "Value {}", value),
+            ParseTreeNode::VariableExpression{ name, .. } => write!(f, "Variable {}", name),
         }
     }
 }
 
-fn render_arguments(arguments: &Vec<(String, ValueType)>) -> String
+fn render_arguments(arguments: &Vec<(String, ValueType, Token)>) -> String
 {
     let mut result = String::new();
 
-    for (arg_name, arg_type) in arguments
+    for (arg_name, arg_type, _) in arguments
     {
         if result.len() > 0
         {

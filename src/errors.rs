@@ -1,11 +1,12 @@
 #![allow(dead_code)]
 
-use crate::{preprocessor::PreprocessorError, compiler::Compiler, parser::ParseError};
+use crate::{preprocessor::PreprocessorError, compiler::Compiler, parser::ParseError, codegen::CodegenError};
 pub enum CompilerError
 {
     BadFilename(String),
     PreprocessorError(PreprocessorError),
-    ParseError(ParseError)
+    ParseError(ParseError),
+    CodegenError(CodegenError)
 }
 
 impl std::fmt::Display for CompilerError
@@ -16,7 +17,8 @@ impl std::fmt::Display for CompilerError
         {
             CompilerError::BadFilename(name) => write!(f, "Unable to open file {}", name),
             CompilerError::PreprocessorError(error) => write!(f, "Preprocessor error: {}", error),
-            CompilerError::ParseError(error) => write!(f, "Parse error: {}", error)
+            CompilerError::ParseError(error) => write!(f, "Parse error: {}", error),
+            CompilerError::CodegenError(error) => write!(f, "Codegen error: {}", error)
         }
     }
 }
@@ -37,6 +39,14 @@ impl std::convert::From<ParseError> for CompilerError
     }
 }
 
+impl std::convert::From<CodegenError> for CompilerError
+{
+    fn from(error: CodegenError) -> Self
+    {
+        CompilerError::CodegenError(error)
+    }
+}
+
 impl CompilerError
 {
     pub fn output_more(self, compiler: &mut Compiler)
@@ -51,6 +61,13 @@ impl CompilerError
                 }
             },
             CompilerError::ParseError(error) =>
+            {
+                if let Ok(file) = compiler.get_file_manager(&error.location.filename)
+                {
+                    file.display_arrow(&error.location, error.arrow_length);
+                }
+            },
+            CompilerError::CodegenError(error) =>
             {
                 if let Ok(file) = compiler.get_file_manager(&error.location.filename)
                 {
