@@ -7,7 +7,7 @@ use super::*;
 /// Parser Context Object
 pub struct Parser<'a, S: std::iter::Iterator<Item = &'a Token>>
 {
-    stream: std::iter::Peekable<S>
+    pub stream: std::iter::Peekable<S>
 }
 
 impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
@@ -138,15 +138,7 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
     /// Parse an expression
     pub fn parse_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        // If the next token is an integer literal, parse as such
-        if let Some(TokenType::IntegerLiteral(_)) = self.stream.peek().map(|v| &v.token_type)
-        {
-            self.parse_integer_value()
-        }
-        else
-        {
-            self.parse_variable_name()
-        }
+        self.parse_primary_expression()
     }
 
     /// Parse an integer value
