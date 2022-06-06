@@ -116,7 +116,7 @@ pub fn tokenize(file: &FileManager) -> CompilerResult<Vec<Token>>
                 }
 
                 if ONLY_DOUBLE_CHAR_SYMBOLS.contains(&current.as_str()) || ONLY_SINGLE_CHAR_SYMBOLS.contains(&s) || 
-                    (SINGLE_CHAR_SYMBOLS.contains(&s) && !DOUBLE_CHAR_SYMBOLS.contains(&next_current.as_str())) || 
+                    (SINGLE_CHAR_SYMBOLS.contains(&current.as_str()) && !DOUBLE_CHAR_SYMBOLS.contains(&next_current.as_str())) || 
                     (DOUBLE_CHAR_SYMBOLS.contains(&current.as_str()) && !DOUBLE_CHAR_SYMBOLS.contains(&next_current.as_str()))
                 {
                     push_token(&mut current, &mut last_location, &mut result);
