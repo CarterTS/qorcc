@@ -5,10 +5,10 @@ use super::Location;
 
 use crate::errors::*;
 
-const SINGLE_CHAR_SYMBOLS: [&str; 13] = ["+", "-", "*", "/", ";", "(", ")", "{", "}", "=", ",", "<", ">"];
-const ONLY_SINGLE_CHAR_SYMBOLS: [&str; 6] = [";", "(", ")", "{", "}", ","];
+const SINGLE_CHAR_SYMBOLS: [&str; 17] = ["+", "-", "*", "/", ";", "(", ")", "{", "}", "=", ",", "<", ">", "!", "~", "*", "&"];
+const ONLY_SINGLE_CHAR_SYMBOLS: [&str; 7] = [";", "(", ")", "{", "}", ",", "~"];
 const ONLY_DOUBLE_CHAR_SYMBOLS: [&str; 9] = ["++", "--", "==", "+=", "-=", "*=", "/=", "<=", ">="];
-const DOUBLE_CHAR_SYMBOLS: [&str; 13] = ["++", "--", "==", "+=", "-=", "*=", "/=", "<=", ">=", "<<", ">>", "<<=", ">>="];
+const DOUBLE_CHAR_SYMBOLS: [&str; 14] = ["++", "--", "==", "+=", "-=", "*=", "/=", "<=", ">=", "<<", ">>", "<<=", ">>=", "!="];
 
 /// Convert a string into a token_type
 pub fn convert_to_token_type(s: String) -> TokenType
@@ -118,6 +118,11 @@ pub fn tokenize(file: &FileManager) -> CompilerResult<Vec<Token>>
                 if ONLY_DOUBLE_CHAR_SYMBOLS.contains(&current.as_str()) || ONLY_SINGLE_CHAR_SYMBOLS.contains(&s) || 
                     (SINGLE_CHAR_SYMBOLS.contains(&current.as_str()) && !DOUBLE_CHAR_SYMBOLS.contains(&next_current.as_str())) || 
                     (DOUBLE_CHAR_SYMBOLS.contains(&current.as_str()) && !DOUBLE_CHAR_SYMBOLS.contains(&next_current.as_str()))
+                {
+                    push_token(&mut current, &mut last_location, &mut result);
+                }
+
+                if SINGLE_CHAR_SYMBOLS.contains(&s) && !SINGLE_CHAR_SYMBOLS.contains(&current.as_str().chars().last().map(|c| c.to_string()).unwrap_or(String::new()).as_str())
                 {
                     push_token(&mut current, &mut last_location, &mut result);
                 }

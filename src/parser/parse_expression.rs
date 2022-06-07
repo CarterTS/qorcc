@@ -1,4 +1,3 @@
-use crate::compiler::Compiler;
 use crate::tokenizer::{Token, TokenType};
 use crate::errors::CompilerResult;
 
@@ -28,7 +27,36 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
     /// Parse an unary expression
     pub fn parse_unary_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_postfix_expression()
+        let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+        // Check for the operation
+        let operation = match &peeked_next.token_type
+        {
+            TokenType::Symbol(symbol_data) => 
+            {
+                match symbol_data.as_str()
+                {
+                    "-" => UnaryExpressionOperation::Negation,
+                    "+" => UnaryExpressionOperation::Positive,
+                    "--" => UnaryExpressionOperation::Decrement,
+                    "++" => UnaryExpressionOperation::Increment,
+                    "&" => UnaryExpressionOperation::Reference,
+                    "*" => UnaryExpressionOperation::Dereference,
+                    "~" => UnaryExpressionOperation::BitwiseNot,
+                    "!" => UnaryExpressionOperation::LogicalNot,
+                    _ => { return self.parse_postfix_expression(); }
+                }
+            }
+            _ => { return self.parse_postfix_expression(); },
+        };
+
+        // Step through the operation token
+        let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+        // Get the inner operation
+        let inner = self.parse_unary_expression()?;
+
+        Ok(ParseTreeNode::UnaryExpression { operation, child: Box::new(inner), optoken })
     }
 
     /// Parse a cast expression
