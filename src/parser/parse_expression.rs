@@ -216,66 +216,337 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
     /// Parse a shift expression
     pub fn parse_shift_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_additive_expression()
+        // Get the first part of the expression
+        let mut first = self.parse_additive_expression()?;
+
+        loop
+        {
+            // Peek the operation
+            let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+            // Get the operation
+            let operation = match peeked_next.token_type
+            {
+                TokenType::Symbol(symbol_text) =>
+                match symbol_text.as_str()
+                {
+                    "<<" => ShiftExpressionOperation::ShiftLeft,
+                    ">>" => ShiftExpressionOperation::ShiftRight,
+                    _ => { return Ok( first ) }
+                }
+                _ => { return Ok( first ) }
+            };
+
+            // Get the operation token
+            let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+            // Get the second part of the expression
+            let second = self.parse_additive_expression()?;
+
+            first = ParseTreeNode::ShiftExpression { operation, children: vec![first, second], optoken };
+        }
     }   
 
     /// Parse a relational expression
     pub fn parse_relational_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_shift_expression()
+        // Get the first part of the expression
+        let mut first = self.parse_shift_expression()?;
+
+        loop
+        {
+            // Peek the operation
+            let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+            // Get the operation
+            let operation = match peeked_next.token_type
+            {
+                TokenType::Symbol(symbol_text) =>
+                match symbol_text.as_str()
+                {
+                    "<" => RelationalExpressionOperation::LessThan,
+                    "<=" => RelationalExpressionOperation::LessThanOrEqual,
+                    ">" => RelationalExpressionOperation::GreaterThan,
+                    ">=" => RelationalExpressionOperation::GreaterThanOrEqual,
+                    _ => { return Ok( first ) }
+                }
+                _ => { return Ok( first ) }
+            };
+
+            // Get the operation token
+            let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+            // Get the second part of the expression
+            let second = self.parse_shift_expression()?;
+
+            first = ParseTreeNode::RelationalExpression { operation, children: vec![first, second], optoken };
+        }
     }
 
     /// Parse an equality expression
     pub fn parse_equality_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_relational_expression()
+        // Get the first part of the expression
+        let mut first = self.parse_relational_expression()?;
+
+        loop
+        {
+            // Peek the operation
+            let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+            // Get the operation
+            let operation = match peeked_next.token_type
+            {
+                TokenType::Symbol(symbol_text) =>
+                match symbol_text.as_str()
+                {
+                    "==" => EqualityExpressionOperation::Equality,
+                    "!=" => EqualityExpressionOperation::Nonequality,
+                    _ => { return Ok( first ) }
+                }
+                _ => { return Ok( first ) }
+            };
+
+            // Get the operation token
+            let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+            // Get the second part of the expression
+            let second = self.parse_relational_expression()?;
+
+            first = ParseTreeNode::EqualityExpression { operation, children: vec![first, second], optoken };
+        }
     }
 
     /// Parse an and expression
     pub fn parse_and_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_equality_expression()
+        // Get the first part of the expression
+        let mut first = self.parse_equality_expression()?;
+
+        loop
+        {
+            // Peek the operation
+            let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+            // Get the operation
+            if peeked_next.token_type != TokenType::Symbol("&".to_string())
+            {
+                return Ok(first);
+            };
+
+            // Get the operation token
+            let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+            // Get the second part of the expression
+            let second = self.parse_equality_expression()?;
+
+            first = ParseTreeNode::AndExpression { children: vec![first, second], optoken };
+        }
     }
 
     /// Parse a xor expression
     pub fn parse_xor_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_and_expression()
+        // Get the first part of the expression
+        let mut first = self.parse_and_expression()?;
+
+        loop
+        {
+            // Peek the operation
+            let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+            // Get the operation
+            if peeked_next.token_type != TokenType::Symbol("^".to_string())
+            {
+                return Ok(first);
+            };
+
+            // Get the operation token
+            let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+            // Get the second part of the expression
+            let second = self.parse_and_expression()?;
+
+            first = ParseTreeNode::XorExpression { children: vec![first, second], optoken };
+        }
     }
 
     /// Parse an or expression
     pub fn parse_or_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_xor_expression()
+        // Get the first part of the expression
+        let mut first = self.parse_xor_expression()?;
+
+        loop
+        {
+            // Peek the operation
+            let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+            // Get the operation
+            if peeked_next.token_type != TokenType::Symbol("|".to_string())
+            {
+                return Ok(first);
+            };
+
+            // Get the operation token
+            let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+            // Get the second part of the expression
+            let second = self.parse_xor_expression()?;
+
+            first = ParseTreeNode::OrExpression { children: vec![first, second], optoken };
+        }
     }
 
     /// Parse a logical and expression
     pub fn parse_logical_and_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_or_expression()
+        // Get the first part of the expression
+        let mut first = self.parse_or_expression()?;
+
+        loop
+        {
+            // Peek the operation
+            let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+            // Get the operation
+            if peeked_next.token_type != TokenType::Symbol("&&".to_string())
+            {
+                return Ok(first);
+            };
+
+            // Get the operation token
+            let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+            // Get the second part of the expression
+            let second = self.parse_or_expression()?;
+
+            first = ParseTreeNode::LogicalAndExpression { children: vec![first, second], optoken };
+        }
     }
 
     /// Parse a logical or expression
     pub fn parse_logical_or_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_logical_and_expression()
+        // Get the first part of the expression
+        let mut first = self.parse_logical_and_expression()?;
+
+        loop
+        {
+            // Peek the operation
+            let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+            // Get the operation
+            if peeked_next.token_type != TokenType::Symbol("||".to_string())
+            {
+                return Ok(first);
+            };
+
+            // Get the operation token
+            let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+            // Get the second part of the expression
+            let second = self.parse_logical_and_expression()?;
+
+            first = ParseTreeNode::LogicalOrExpression { children: vec![first, second], optoken };
+        }
     }
 
     /// Parse a conditional expression
     pub fn parse_conditional_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_logical_or_expression()
+        // Get the first part of the expression
+        let first = self.parse_logical_or_expression()?;
+
+        // Peek the operation
+        let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+        // Get the operation
+        if peeked_next.token_type != TokenType::Symbol("?".to_string())
+        {
+            return Ok(first);
+        };
+
+        // Get the operation token
+        let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+        // Get the second part of the expression
+        let second = self.parse_expression()?;
+
+        ParseError::expect_symbol(self.stream.next(), ":")?;
+
+        let third = self.parse_expression()?;
+
+        Ok(ParseTreeNode::ConditionalExpression { children: vec![first, second, third], optoken })
     }
 
     /// Parse an assignment expression
     pub fn parse_assignment_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_conditional_expression()
+        // Get the first part of the expression
+        let mut first = self.parse_conditional_expression()?;
+
+        loop
+        {
+            // Peek the operation
+            let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+            // Get the operation
+            let operation = match peeked_next.token_type
+            {
+                TokenType::Symbol(symbol_text) =>
+                match symbol_text.as_str()
+                {
+                    "=" => AssignmentExpressionOperation::Assignment,
+                    "*=" => AssignmentExpressionOperation::MultiplicationAssignment,
+                    "/=" => AssignmentExpressionOperation::DivisionAssignment,
+                    "%=" => AssignmentExpressionOperation::ModulusAssignment,
+                    "+=" => AssignmentExpressionOperation::AdditionAssignment,
+                    "-=" => AssignmentExpressionOperation::SubtractionAssignment,
+                    "<<=" => AssignmentExpressionOperation::ShiftLeftAssignment,
+                    ">>=" => AssignmentExpressionOperation::ShiftRightAssignment,
+                    "&=" => AssignmentExpressionOperation::AndAssignment,
+                    "^=" => AssignmentExpressionOperation::XorAssignment,
+                    "|=" => AssignmentExpressionOperation::OrAssignment,
+                    _ => { return Ok( first ) }
+                }
+                _ => { return Ok( first ) }
+            };
+
+            // Get the operation token
+            let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+            // Get the second part of the expression
+            let second = self.parse_conditional_expression()?;
+
+            first = ParseTreeNode::AssignmentExpression { operation, children: vec![first, second], optoken };
+        }
     }
 
     /// Parse a comma expression
     pub fn parse_comma_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_assignment_expression()
+        // Get the first part of the expression
+        let mut first = self.parse_assignment_expression()?;
+
+        loop
+        {
+            // Peek the operation
+            let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+            // Get the operation
+            if peeked_next.token_type != TokenType::Symbol(",".to_string())
+            {
+                return Ok(first);
+            };
+
+            // Get the operation token
+            let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+            // Get the second part of the expression
+            let second = self.parse_assignment_expression()?;
+
+            first = ParseTreeNode::CommaExpression { children: vec![first, second], optoken };
+        }
     }
 }
