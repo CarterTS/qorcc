@@ -155,10 +155,10 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
         }
     }
 
-    /// Parse an identifier variable name (variable name)
-    pub fn parse_variable_name(&mut self) -> CompilerResult<ParseTreeNode>
+    /// Parse an identifier with the given name
+    pub fn parse_identifier(&mut self, name: &str) -> CompilerResult<ParseTreeNode>
     {
-        let name_token = ParseError::expect_named_identifier(self.stream.next(), "variable name")?;
+        let name_token = ParseError::expect_named_identifier(self.stream.next(), name)?;
 
         if let TokenType::Identifier(name) = &name_token.token_type
         {

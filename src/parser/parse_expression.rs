@@ -12,7 +12,7 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
 
         match &peeked_next.token_type
         {
-            TokenType::Identifier(_) => self.parse_variable_name(),
+            TokenType::Identifier(_) => self.parse_identifier("variable name"),
             TokenType::IntegerLiteral(_) => self.parse_integer_value(),
             _ => Err(ParseError::syntax_error(format!("Expected primary expression, got {}", peeked_next.code_styled()), &peeked_next).into())
         }
@@ -21,7 +21,75 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
     /// Parse a postfix expression
     pub fn parse_postfix_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_primary_expression()
+        // Get the first part of the expression
+        let mut first = self.parse_primary_expression()?;
+
+        loop
+        {
+            // Peek the operation
+            let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+            // Get the operation
+            let operation = match peeked_next.token_type
+            {
+                TokenType::Symbol(symbol_text) =>
+                match symbol_text.as_str()
+                {
+                    "[" => PostfixExpressionOperation::ArrayIndexing,
+                    "(" => PostfixExpressionOperation::FunctionCall,
+                    "." => PostfixExpressionOperation::MemberAccess,
+                    "->" => PostfixExpressionOperation::IndirectMemberAccess,
+                    "++" => PostfixExpressionOperation::Increment,
+                    "--" => PostfixExpressionOperation::Decrement,
+                    _ => { return Ok( first ) }
+                }
+                _ => { return Ok( first ) }
+            };
+
+            // Get the operation token
+            let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+            // Construct the children portion
+            let mut children = vec![first];
+
+            // Parse the proper value for each expression type
+            match operation
+            {
+                PostfixExpressionOperation::ArrayIndexing => 
+                {
+                    children.push(self.parse_expression()?);
+                    ParseError::expect_symbol(self.stream.next(), "]")?;
+                },
+                PostfixExpressionOperation::FunctionCall => 
+                {
+                    while self.stream.peek().map(|v| &v.token_type) != Some(&TokenType::Symbol(")".to_string()))
+                    {
+                        children.push(self.parse_expression()?);
+
+                        if self.stream.peek().map(|v| &v.token_type) != Some(&TokenType::Symbol(",".to_string()))
+                        {
+                            break;
+                        }
+
+                        ParseError::expect_symbol(self.stream.next(), ",")?;
+                    }
+
+                    ParseError::expect_symbol(self.stream.next(), ")")?;
+                },
+                PostfixExpressionOperation::MemberAccess => 
+                {
+                    children.push(self.parse_identifier("member name")?);
+                },
+                PostfixExpressionOperation::IndirectMemberAccess => 
+                {
+                    children.push(self.parse_identifier("member name")?);
+                },
+                PostfixExpressionOperation::InitializerList => todo!(),
+                _ => {},
+            }
+
+            first = ParseTreeNode::PostfixExpression { operation, children, optoken };
+        }
     }
 
     /// Parse an unary expression
@@ -54,7 +122,7 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
         let optoken = ParseError::prevent_eof(self.stream.next())?;
 
         // Get the inner operation
-        let inner = self.parse_unary_expression()?;
+        let inner = self.parse_cast_expression()?;
 
         Ok(ParseTreeNode::UnaryExpression { operation, child: Box::new(inner), optoken })
     }
