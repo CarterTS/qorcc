@@ -56,7 +56,6 @@ impl IRScope
         for (arg_name, _, _) in arguments
         {
             let reg = function.alloc_next_register();
-            trace!("Inserting Variable {} into register {}", &arg_name, reg);
             variables.insert(arg_name, reg);
         }
 
@@ -157,7 +156,7 @@ impl std::fmt::Display for IRValue
     {
         match self
         {
-            IRValue::Register(number) => write!(f, "{}", number),
+            IRValue::Register(number) => write!(f, "R{}", number),
             IRValue::Immediate(value) => write!(f, "{}", value),
         }
     } 
@@ -167,6 +166,11 @@ impl std::fmt::Display for IRValue
 pub enum IRInstruction
 {
     Return { value: IRValue },
+    Add { dest: IRValue, src1: IRValue, src2: IRValue },
+    Sub { dest: IRValue, src1: IRValue, src2: IRValue },
+    Mul { dest: IRValue, src1: IRValue, src2: IRValue },
+    Div { dest: IRValue, src1: IRValue, src2: IRValue },
+    Mod { dest: IRValue, src1: IRValue, src2: IRValue },
 }
 
 impl std::fmt::Display for IRInstruction
@@ -176,6 +180,11 @@ impl std::fmt::Display for IRInstruction
         match self
         {
             IRInstruction::Return { value } => write!(f, "ret     {}", value),
+            IRInstruction::Add { dest, src1, src2 } => write!(f, "add     {}, {}, {}", dest ,src1, src2),
+            IRInstruction::Sub { dest, src1, src2 } => write!(f, "sub     {}, {}, {}", dest ,src1, src2),
+            IRInstruction::Mul { dest, src1, src2 } => write!(f, "mul     {}, {}, {}", dest ,src1, src2),
+            IRInstruction::Div { dest, src1, src2 } => write!(f, "div     {}, {}, {}", dest ,src1, src2),
+            IRInstruction::Mod { dest, src1, src2 } => write!(f, "mod     {}, {}, {}", dest ,src1, src2),
         }
     } 
 }

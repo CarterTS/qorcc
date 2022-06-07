@@ -62,12 +62,10 @@ impl IRFunction
         Ok(result)
     }
 
-    pub fn get_variable_value(&mut self, expression: ParseTreeNode) -> CompilerResult<IRValue>
+    pub fn get_variable_value(&mut self, expression: &ParseTreeNode) -> CompilerResult<IRValue>
     {
         if let ParseTreeNode::VariableExpression { name, token } = expression
         {
-            println!("Trying to dereference token for {}", token);
-            
             let mut result = None;
 
             for scope in self.scope_stack.iter().rev()
@@ -94,12 +92,52 @@ impl IRFunction
         }
     }
 
-    pub fn generate_expression(&mut self, expression: ParseTreeNode) -> CompilerResult<IRValue>
+    pub fn add_three_op_instruction(&mut self, children: &Vec<ParseTreeNode>) -> CompilerResult<(IRValue, IRValue, IRValue)>
+    {
+        let src1 = self.generate_expression(&children[0])?;
+        let src2 = self.generate_expression(&children[1])?;
+
+        let dest = IRValue::Register(self.alloc_next_register());
+
+        Ok((dest, src1, src2))
+    }
+
+    pub fn generate_expression(&mut self, expression: &ParseTreeNode) -> CompilerResult<IRValue>
     {
         match expression
         {
-            ParseTreeNode::ConstantExpression{ value, .. } => Ok(IRValue::Immediate(value)),
+            ParseTreeNode::ConstantExpression{ value, .. } => Ok(IRValue::Immediate(value.clone())),
             ParseTreeNode::VariableExpression { .. } => self.get_variable_value(expression),
+            ParseTreeNode::AdditiveExpression{operation, children, .. } =>
+            {
+                let (dest, src1, src2) = self.add_three_op_instruction(children)?;
+
+                match operation
+                {
+                    AdditiveExpressionOperation::Addition =>  self.mut_current_block().add_instruction(
+                            IRInstruction::Add { dest: dest.clone(), src1, src2 }),
+                    AdditiveExpressionOperation::Subtraction =>  self.mut_current_block().add_instruction(
+                        IRInstruction::Sub { dest: dest.clone(), src1, src2 }),
+                }
+
+                Ok(dest)
+            },
+            ParseTreeNode::MultiplicativeExpression{operation, children, .. } =>
+            {
+                let (dest, src1, src2) = self.add_three_op_instruction(children)?;
+
+                match operation
+                {
+                    MultiplicativeExpressionOperation::Multiplication =>  self.mut_current_block().add_instruction(
+                        IRInstruction::Mul { dest: dest.clone(), src1, src2 }),
+                    MultiplicativeExpressionOperation::Division =>  self.mut_current_block().add_instruction(
+                        IRInstruction::Div { dest: dest.clone(), src1, src2 }),
+                    MultiplicativeExpressionOperation::Modulus =>  self.mut_current_block().add_instruction(
+                        IRInstruction::Mod { dest: dest.clone(), src1, src2 }),
+                }
+
+                Ok(dest)
+            },
             _ => 
             {
                 error!("Unhandled Expression Type {}", expression);
@@ -125,7 +163,7 @@ impl IRFunction
             {
                 if let Some(expression) = child
                 {
-                    let value = self.generate_expression(*expression)?;
+                    let value = self.generate_expression(&*expression)?;
                     self.mut_current_block().add_instruction(IRInstruction::Return { value });
                 }
                 else

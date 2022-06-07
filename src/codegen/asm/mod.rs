@@ -168,6 +168,7 @@ impl AssemblyCodeGenerator
             {
                 Ok(self.move_reg_value(Register::A0, value.clone()) + "    ret\n")
             },
+            _ => todo!()
         }
     }
 }
