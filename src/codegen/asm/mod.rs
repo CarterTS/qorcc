@@ -15,7 +15,14 @@ pub enum Register
     A3,
     A4,
     A5,
-    A6
+    A6,
+    A7,
+    T0,
+    T1,
+    T2,
+    T3,
+    T4,
+    T5
 }
 
 impl std::fmt::Display for Register
@@ -31,6 +38,13 @@ impl std::fmt::Display for Register
             Register::A4 => write!(f, "a4"),
             Register::A5 => write!(f, "a5"),
             Register::A6 => write!(f, "a6"),
+            Register::A7 => write!(f, "a7"),
+            Register::T0 => write!(f, "t0"),
+            Register::T1 => write!(f, "t1"),
+            Register::T2 => write!(f, "t2"),
+            Register::T3 => write!(f, "t3"),
+            Register::T4 => write!(f, "t4"),
+            Register::T5 => write!(f, "t5"),
         }
     }
 }
@@ -56,6 +70,13 @@ impl AssemblyCodeGenerator
         default_mapping.insert(4, Register::A4);
         default_mapping.insert(5, Register::A5);
         default_mapping.insert(6, Register::A6);
+        default_mapping.insert(7, Register::A7);
+        default_mapping.insert(8, Register::T0);
+        default_mapping.insert(9, Register::T1);
+        default_mapping.insert(10, Register::T2);
+        default_mapping.insert(11, Register::T3);
+        default_mapping.insert(12, Register::T4);
+        default_mapping.insert(13, Register::T5);
 
         Self
         {
