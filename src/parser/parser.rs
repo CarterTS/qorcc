@@ -1,4 +1,3 @@
-use crate::compiler::Compiler;
 use crate::tokenizer::{Token, TokenType};
 use crate::errors::CompilerResult;
 
@@ -138,7 +137,7 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
     /// Parse an expression
     pub fn parse_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_primary_expression()
+        self.parse_comma_expression()
     }
 
     /// Parse an integer value
