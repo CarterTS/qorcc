@@ -68,13 +68,70 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
     /// Parse a multiplicative expression
     pub fn parse_multiplicative_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_cast_expression()
+        // Get the first part of the expression
+        let mut first = self.parse_cast_expression()?;
+
+        loop
+        {
+            // Peek the operation
+            let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+            // Get the operation
+            let operation = match peeked_next.token_type
+            {
+                TokenType::Symbol(symbol_text) =>
+                match symbol_text.as_str()
+                {
+                    "*" => MultiplicativeExpressionOperation::Multiplication,
+                    "/" => MultiplicativeExpressionOperation::Division,
+                    "%" => MultiplicativeExpressionOperation::Modulus,
+                    _ => { return Ok( first ) }
+                }
+                _ => { return Ok( first ) }
+            };
+
+            // Get the operation token
+            let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+            // Get the second part of the expression
+            let second = self.parse_cast_expression()?;
+
+            first = ParseTreeNode::MultiplicativeExpression { operation, children: vec![first, second], optoken };
+        }
     }
 
     /// Parse an additive expression
     pub fn parse_additive_expression(&mut self) -> CompilerResult<ParseTreeNode>
     {
-        self.parse_multiplicative_expression()
+        // Get the first part of the expression
+        let mut first = self.parse_multiplicative_expression()?;
+
+        loop
+        {
+            // Peek the operation
+            let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
+
+            // Get the operation
+            let operation = match peeked_next.token_type
+            {
+                TokenType::Symbol(symbol_text) =>
+                match symbol_text.as_str()
+                {
+                    "+" => AdditiveExpressionOperation::Addition,
+                    "-" => AdditiveExpressionOperation::Subtraction,
+                    _ => { return Ok( first ) }
+                }
+                _ => { return Ok( first ) }
+            };
+
+            // Get the operation token
+            let optoken = ParseError::prevent_eof(self.stream.next())?;
+
+            // Get the second part of the expression
+            let second = self.parse_multiplicative_expression()?;
+
+            first = ParseTreeNode::AdditiveExpression { operation, children: vec![first, second], optoken };
+        }
     }
 
     /// Parse a shift expression

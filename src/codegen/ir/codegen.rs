@@ -101,7 +101,11 @@ impl IRFunction
         {
             ParseTreeNode::ConstantExpression{ value, .. } => Ok(IRValue::Immediate(value)),
             ParseTreeNode::VariableExpression { .. } => self.get_variable_value(expression),
-            _ => todo!()
+            _ => 
+            {
+                error!("Unhandled Expression Type {}", expression);
+                todo!()
+            }
         }
     }
 
