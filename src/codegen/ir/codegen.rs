@@ -1,4 +1,3 @@
-use crate::compiler::Compiler;
 use crate::parser::*;
 use crate::tokenizer::*;
 use crate::errors::*;

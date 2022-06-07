@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use super::{IR, IRBlock, IRFunction, IRInstruction, IRValue};
 
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
 
 use crate::errors::*;
 
@@ -134,8 +134,8 @@ impl AssemblyCodeGenerator
     {
         match source
         {
-            super::IRValue::Register(reg) => self.move_reg_reg(Register::A0, *self.mapping.get(&reg).unwrap()),
-            super::IRValue::Immediate(immediate) => self.move_reg_imm(Register::A0, immediate.value as i64),
+            super::IRValue::Register(reg) => self.move_reg_reg(dest, *self.mapping.get(&reg).unwrap()),
+            super::IRValue::Immediate(immediate) => self.move_reg_imm(dest, immediate.value as i64),
         }
     }
 

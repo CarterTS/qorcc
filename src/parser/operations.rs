@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 /// Expression Operations for postfix Expressions
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PostfixExpressionOperation
