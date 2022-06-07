@@ -151,12 +151,197 @@ impl AssemblyCodeGenerator
         format!("    li {}, {}\n", dest, source)
     }
 
+    pub fn add_reg_imm(&self, dest: Register, src1: Register, src2: i64) -> String
+    {
+        format!("    addi {}, {}, {}\n", dest, src1, src2)
+    }
+
+    pub fn add_reg_reg(&self, dest: Register, src1: Register, src2: Register) -> String
+    {
+        format!("    add {}, {}, {}\n", dest, src1, src2)
+    }
+
+    pub fn sub_reg_imm(&self, dest: Register, src1: Register, src2: i64) -> String
+    {
+        format!("    addi {}, {}, {}\n", dest, src1, -src2)
+    }
+
+    pub fn sub_imm_reg(&self, dest: Register, src1: i64, src2: Register) -> String
+    {
+        format!("    neg t6, {}\n    addi {}, {}, t6\n", src2, dest, src1)
+    }
+
+    pub fn sub_reg_reg(&self, dest: Register, src1: Register, src2: Register) -> String
+    {
+        format!("    sub {}, {}, {}\n", dest, src1, src2)
+    }
+
+    pub fn mul_reg_imm(&self, dest: Register, src1: Register, src2: i64) -> String
+    {
+        format!("    li t6, {}\n    mul {}, {}, t6\n", src2, dest, src1)
+    }
+
+    pub fn mul_reg_reg(&self, dest: Register, src1: Register, src2: Register) -> String
+    {
+        format!("    mul {}, {}, {}\n", dest, src1, src2)
+    }
+
+    pub fn div_reg_imm(&self, dest: Register, src1: Register, src2: i64) -> String
+    {
+        format!("    li t6, {}\n    div {}, {}, t6\n", src2, dest, src1)
+    }
+
+    pub fn div_imm_reg(&self, dest: Register, src1: i64, src2: Register) -> String
+    {
+        format!("    li t6, {}\n    div {}, {}, t6\n", src1, dest, src2)
+    }
+
+    pub fn div_reg_reg(&self, dest: Register, src1: Register, src2: Register) -> String
+    {
+        format!("    div {}, {}, {}\n", dest, src1, src2)
+    }
+
+    pub fn mod_reg_imm(&self, dest: Register, src1: Register, src2: i64) -> String
+    {
+        format!("    li t6, {}\n    rem {}, {}, t6\n", src2, dest, src1)
+    }
+
+    pub fn mod_imm_reg(&self, dest: Register, src1: i64, src2: Register) -> String
+    {
+        format!("    li t6, {}\n    div {}, t6, {}\n", src1, dest, src2)
+    }
+
+    pub fn mod_reg_reg(&self, dest: Register, src1: Register, src2: Register) -> String
+    {
+        format!("    rem {}, {}, {}\n", dest, src1, src2)
+    }
+
     pub fn move_reg_value(&self, dest: Register, source: IRValue) -> String
     {
         match source
         {
             super::IRValue::Register(reg) => self.move_reg_reg(dest, *self.mapping.get(&reg).unwrap()),
             super::IRValue::Immediate(immediate) => self.move_reg_imm(dest, immediate.value as i64),
+        }
+    }
+
+    pub fn add_reg_value_value(&self, dest: Register, src1: &IRValue, src2: &IRValue) -> String
+    {
+        if let (IRValue::Immediate(imm0), IRValue::Immediate(imm1)) = (src1, src2)
+        {
+            self.move_reg_imm(dest, imm0.value.wrapping_add(imm1.value) as i64)
+        }
+        else if let (IRValue::Immediate(imm), IRValue::Register(reg)) = (src1, src2)
+        {
+            self.add_reg_imm(dest, *self.mapping.get(&reg).unwrap(), imm.value as i64)
+        }
+        else if let (IRValue::Register(reg), IRValue::Immediate(imm)) = (src1, src2)
+        {
+            self.add_reg_imm(dest, *self.mapping.get(&reg).unwrap(), imm.value as i64)
+        }
+        else if let (IRValue::Register(reg0), IRValue::Register(reg1)) = (src1, src2)
+        {
+            self.add_reg_reg(dest, *self.mapping.get(&reg0).unwrap(), *self.mapping.get(&reg1).unwrap())
+        }
+        else
+        {
+            unreachable!()
+        }
+    }
+
+    pub fn mul_reg_value_value(&self, dest: Register, src1: &IRValue, src2: &IRValue) -> String
+    {
+        if let (IRValue::Immediate(imm0), IRValue::Immediate(imm1)) = (src1, src2)
+        {
+            self.move_reg_imm(dest, imm0.value.wrapping_mul(imm1.value) as i64)
+        }
+        else if let (IRValue::Immediate(imm), IRValue::Register(reg)) = (src1, src2)
+        {
+            self.mul_reg_imm(dest, *self.mapping.get(&reg).unwrap(), imm.value as i64)
+        }
+        else if let (IRValue::Register(reg), IRValue::Immediate(imm)) = (src1, src2)
+        {
+            self.mul_reg_imm(dest, *self.mapping.get(&reg).unwrap(), imm.value as i64)
+        }
+        else if let (IRValue::Register(reg0), IRValue::Register(reg1)) = (src1, src2)
+        {
+            self.mul_reg_reg(dest, *self.mapping.get(&reg0).unwrap(), *self.mapping.get(&reg1).unwrap())
+        }
+        else
+        {
+            unreachable!()
+        }
+    }
+
+    pub fn sub_reg_value_value(&self, dest: Register, src1: &IRValue, src2: &IRValue) -> String
+    {
+        if let (IRValue::Immediate(imm0), IRValue::Immediate(imm1)) = (src1, src2)
+        {
+            self.move_reg_imm(dest, imm0.value.wrapping_sub(imm1.value) as i64)
+        }
+        else if let (IRValue::Immediate(imm), IRValue::Register(reg)) = (src1, src2)
+        {
+            self.sub_reg_imm(dest, *self.mapping.get(&reg).unwrap(), imm.value as i64)
+        }
+        else if let (IRValue::Register(reg), IRValue::Immediate(imm)) = (src1, src2)
+        {
+            self.sub_imm_reg(dest, imm.value as i64, *self.mapping.get(&reg).unwrap())
+        }
+        else if let (IRValue::Register(reg0), IRValue::Register(reg1)) = (src1, src2)
+        {
+            self.sub_reg_reg(dest, *self.mapping.get(&reg0).unwrap(), *self.mapping.get(&reg1).unwrap())
+        }
+        else
+        {
+            unreachable!()
+        }
+    }
+
+    pub fn div_reg_value_value(&self, dest: Register, src1: &IRValue, src2: &IRValue) -> String
+    {
+        if let (IRValue::Immediate(imm0), IRValue::Immediate(imm1)) = (src1, src2)
+        {
+            self.move_reg_imm(dest, imm0.value.wrapping_sub(imm1.value) as i64)
+        }
+        else if let (IRValue::Immediate(imm), IRValue::Register(reg)) = (src1, src2)
+        {
+            self.div_reg_imm(dest, *self.mapping.get(&reg).unwrap(), imm.value as i64)
+        }
+        else if let (IRValue::Register(reg), IRValue::Immediate(imm)) = (src1, src2)
+        {
+            self.div_imm_reg(dest, imm.value as i64, *self.mapping.get(&reg).unwrap())
+        }
+        else if let (IRValue::Register(reg0), IRValue::Register(reg1)) = (src1, src2)
+        {
+            self.div_reg_reg(dest, *self.mapping.get(&reg0).unwrap(), *self.mapping.get(&reg1).unwrap())
+        }
+        else
+        {
+            unreachable!()
+        }
+    }
+
+    pub fn mod_reg_value_value(&self, dest: Register, src1: &IRValue, src2: &IRValue) -> String
+    {
+        if let (IRValue::Immediate(imm0), IRValue::Immediate(imm1)) = (src1, src2)
+        {
+            self.move_reg_imm(dest, imm0.value.wrapping_sub(imm1.value) as i64)
+        }
+        else if let (IRValue::Immediate(imm), IRValue::Register(reg)) = (src1, src2)
+        {
+            self.mod_reg_imm(dest, *self.mapping.get(&reg).unwrap(), imm.value as i64)
+        }
+        else if let (IRValue::Register(reg), IRValue::Immediate(imm)) = (src1, src2)
+        {
+            self.mod_imm_reg(dest, imm.value as i64, *self.mapping.get(&reg).unwrap())
+        }
+        else if let (IRValue::Register(reg0), IRValue::Register(reg1)) = (src1, src2)
+        {
+            self.mod_reg_reg(dest, *self.mapping.get(&reg0).unwrap(), *self.mapping.get(&reg1).unwrap())
+        }
+        else
+        {
+            unreachable!()
         }
     }
 
@@ -167,6 +352,61 @@ impl AssemblyCodeGenerator
             IRInstruction::Return { value } => 
             {
                 Ok(self.move_reg_value(Register::A0, value.clone()) + "    ret\n")
+            },
+            IRInstruction::Add { dest, src1, src2  } => 
+            {
+                if let IRValue::Register(dest) = dest
+                {
+                    Ok(self.add_reg_value_value(*self.mapping.get(dest).unwrap(), src1, src2))
+                }
+                else
+                {
+                    unreachable!()
+                }
+            },
+            IRInstruction::Sub { dest, src1, src2  } => 
+            {
+                if let IRValue::Register(dest) = dest
+                {
+                    Ok(self.sub_reg_value_value(*self.mapping.get(dest).unwrap(), src1, src2))
+                }
+                else
+                {
+                    unreachable!()
+                }
+            },
+            IRInstruction::Mul { dest, src1, src2  } => 
+            {
+                if let IRValue::Register(dest) = dest
+                {
+                    Ok(self.mul_reg_value_value(*self.mapping.get(dest).unwrap(), src1, src2))
+                }
+                else
+                {
+                    unreachable!()
+                }
+            },
+            IRInstruction::Div { dest, src1, src2  } => 
+            {
+                if let IRValue::Register(dest) = dest
+                {
+                    Ok(self.div_reg_value_value(*self.mapping.get(dest).unwrap(), src1, src2))
+                }
+                else
+                {
+                    unreachable!()
+                }
+            },
+            IRInstruction::Mod { dest, src1, src2  } => 
+            {
+                if let IRValue::Register(dest) = dest
+                {
+                    Ok(self.mod_reg_value_value(*self.mapping.get(dest).unwrap(), src1, src2))
+                }
+                else
+                {
+                    unreachable!()
+                }
             },
             _ => todo!()
         }
