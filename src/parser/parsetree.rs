@@ -30,6 +30,8 @@ pub enum ParseTreeNode
     ConditionalExpression{children: Vec<ParseTreeNode>, optoken: Token},
     AssignmentExpression{operation: AssignmentExpressionOperation, children: Vec<ParseTreeNode>, optoken: Token},
     CommaExpression{children: Vec<ParseTreeNode>, optoken: Token},
+    IfStatement{children: Vec<ParseTreeNode>},
+    WhileLoop{children: Vec<ParseTreeNode>},
 }
 
 impl ParseTreeNode
@@ -85,6 +87,8 @@ impl ParseTreeNode
             ParseTreeNode::ConditionalExpression { children, .. } => Some(children.to_vec()),
             ParseTreeNode::AssignmentExpression { children, .. } => Some(children.to_vec()),
             ParseTreeNode::CommaExpression { children, .. } => Some(children.to_vec()),
+            ParseTreeNode::IfStatement { children } => Some(children.to_vec()),
+            ParseTreeNode::WhileLoop { children } => Some(children.to_vec()),
         }
     }
 }
@@ -117,6 +121,8 @@ impl std::fmt::Display for ParseTreeNode
             ParseTreeNode::ConditionalExpression { .. } => write!(f, "ConditionalExpression"),
             ParseTreeNode::AssignmentExpression { operation, .. } => write!(f, "AssignmentExpression {:?}", operation),
             ParseTreeNode::CommaExpression { .. } => write!(f, "CommaExpression"),
+            ParseTreeNode::IfStatement { .. } => write!(f, "IfStatement"),
+            ParseTreeNode::WhileLoop { .. } => write!(f, "WhileLoop"),
         }
     }
 }

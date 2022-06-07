@@ -94,6 +94,20 @@ impl ParseError
         }
     }
 
+    pub fn expect_specific_identifier(token: Option<&Token>, specific: &str) -> Result<Token, ParseError>
+    {
+        let token = ParseError::prevent_eof(token)?;
+
+        if TokenType::Identifier(specific.to_string()) == token.token_type
+        {
+            Ok(token)
+        }
+        else
+        {
+            Err(ParseError::syntax_error(format!("Expected {}, got {}", specific, token.code_styled()), &token))
+        }
+    }
+
     pub fn expect_named_identifier(token: Option<&Token>, name: &str) -> Result<Token, ParseError>
     {
         let token = ParseError::prevent_eof(token)?;

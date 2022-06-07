@@ -89,6 +89,45 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
         Ok(ParseTreeNode::Function { name: name.code_styled(), child: Box::new(statement), return_type, arguments, name_token: name })
     }
 
+    /// Parse an if statement
+    pub fn parse_if_statement(&mut self) -> CompilerResult<ParseTreeNode>
+    {
+        ParseError::expect_specific_identifier(self.stream.next(), "if")?;
+        ParseError::expect_symbol(self.stream.next(), "(")?;
+
+        let expr = self.parse_expression()?;
+        
+        ParseError::expect_symbol(self.stream.next(), ")")?;
+
+        let statement = self.parse_statement()?;
+
+        if TokenType::Identifier("else".to_string()) == ParseError::prevent_eof(self.stream.peek().map(|v| *v))?.token_type
+        {
+            ParseError::expect_specific_identifier(self.stream.next(), "else")?;
+
+            Ok(ParseTreeNode::IfStatement { children: vec![expr, statement, self.parse_statement()?] })
+        }
+        else
+        {
+            Ok(ParseTreeNode::IfStatement { children: vec![expr, statement] })
+        }
+    }
+
+    /// Parse a while loop
+    pub fn parse_while_loop(&mut self) -> CompilerResult<ParseTreeNode>
+    {
+        ParseError::expect_specific_identifier(self.stream.next(), "while")?;
+        ParseError::expect_symbol(self.stream.next(), "(")?;
+
+        let expr = self.parse_expression()?;
+        
+        ParseError::expect_symbol(self.stream.next(), ")")?;
+
+        let statement = self.parse_statement()?;
+
+        Ok(ParseTreeNode::WhileLoop { children: vec![expr, statement] })
+    }
+
     /// Parse a statement
     pub fn parse_statement(&mut self) -> CompilerResult<ParseTreeNode>
     {
@@ -127,6 +166,16 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
             ParseError::expect_symbol(self.stream.next(), ";")?;
 
             Ok(ParseTreeNode::ReturnStatement { child: Some(Box::new(value)) })
+        }
+        // If statement
+        else if peeked.token_type == TokenType::Identifier(String::from("if"))
+        {
+            self.parse_if_statement()
+        }
+        // While loop
+        else if peeked.token_type == TokenType::Identifier(String::from("while"))
+        {
+            self.parse_while_loop()
         }
         else
         {
