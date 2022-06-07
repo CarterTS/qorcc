@@ -10,6 +10,17 @@ impl<'a, S: std::iter::Iterator<Item = &'a Token>> Parser<'a, S>
     {
         let peeked_next = ParseError::prevent_eof(self.stream.peek().map(|v| *v))?;
 
+        if peeked_next.token_type == TokenType::Symbol("(".to_string())
+        {
+            self.stream.next();
+
+            let result = self.parse_expression()?;
+
+            ParseError::expect_symbol(self.stream.next(), ")")?;
+
+            return Ok(result)
+        }
+
         match &peeked_next.token_type
         {
             TokenType::Identifier(_) => self.parse_identifier("variable name"),

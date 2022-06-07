@@ -32,3 +32,8 @@ int test2(int a, int b)
 {
     return b + a * 5;
 }
+
+int test3(int a, int b, int c)
+{
+    return (b + a) * c;
+}
