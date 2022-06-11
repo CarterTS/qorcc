@@ -81,6 +81,7 @@ pub struct IRFunction
     pub current_block: usize,
     pub scope_stack: Vec<IRScope>,
     pub next_register: usize,
+    pub next_block: usize,
 }
 
 impl IRFunction
@@ -104,6 +105,15 @@ impl IRFunction
     {
         self.next_register += 1;
         self.next_register - 1
+    }
+
+    pub fn alloc_next_block(&mut self) -> usize
+    {
+        self.next_block += 1;
+
+        self.blocks.push(IRBlock::new(self.next_block - 1));
+
+        self.next_block - 1
     }
 }
 
@@ -142,7 +152,7 @@ impl IRBlock
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum IRValue
 {
@@ -162,6 +172,33 @@ impl std::fmt::Display for IRValue
     } 
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IRBranchCondition
+{
+    Equal,
+    NotEqual,
+    LessThan,
+    GreaterThan,
+    LessThanEqualTo,
+    GreaterThanEqualTo
+}
+
+impl std::fmt::Display for IRBranchCondition
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result
+    {
+        match self  
+        {
+            IRBranchCondition::Equal => write!(f, "eq"),
+            IRBranchCondition::NotEqual => write!(f, "ne"),
+            IRBranchCondition::LessThan => write!(f, "lt"),
+            IRBranchCondition::GreaterThan => write!(f, "gt"),
+            IRBranchCondition::LessThanEqualTo => write!(f, "le"),
+            IRBranchCondition::GreaterThanEqualTo => write!(f, "ge"),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum IRInstruction
 {
@@ -171,6 +208,8 @@ pub enum IRInstruction
     Mul { dest: IRValue, src1: IRValue, src2: IRValue },
     Div { dest: IRValue, src1: IRValue, src2: IRValue },
     Mod { dest: IRValue, src1: IRValue, src2: IRValue },
+    Jump { dest: usize },
+    Branch { condition: IRBranchCondition, src1: IRValue,  src2: IRValue, dest_true: usize, dest_false: usize }
 }
 
 impl std::fmt::Display for IRInstruction
@@ -185,6 +224,8 @@ impl std::fmt::Display for IRInstruction
             IRInstruction::Mul { dest, src1, src2 } => write!(f, "mul     {}, {}, {}", dest ,src1, src2),
             IRInstruction::Div { dest, src1, src2 } => write!(f, "div     {}, {}, {}", dest ,src1, src2),
             IRInstruction::Mod { dest, src1, src2 } => write!(f, "mod     {}, {}, {}", dest ,src1, src2),
+            IRInstruction::Jump { dest } => write!(f, "j       L{}", dest),
+            IRInstruction::Branch { condition, src1, src2, dest_true, dest_false } => write!(f, "b{}     {}, {}, L{}, L{}", condition, src1, src2, dest_true, dest_false),
         }
     } 
 }

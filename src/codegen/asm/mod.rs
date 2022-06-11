@@ -1,11 +1,17 @@
 pub mod add;
 pub use add::*;
 
+pub mod branch;
+pub use branch::*;
+
 pub mod codegen;
 pub use codegen::*;
 
 pub mod div;
 pub use div::*;
+
+pub mod jump;
+pub use jump::*;
 
 pub mod modulus;
 pub use modulus::*;

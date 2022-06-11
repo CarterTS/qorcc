@@ -3,6 +3,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Register
 {
+    Zero,
     A0,
     A1,
     A2, 
@@ -25,6 +26,7 @@ impl std::fmt::Display for Register
     {
         match self
         {
+            Register::Zero => write!(f, "zero"),
             Register::A0 => write!(f, "a0"),
             Register::A1 => write!(f, "a1"),
             Register::A2 => write!(f, "a2"),

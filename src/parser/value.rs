@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 /// Value Enumeration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Value
 {
     pub value: u64,
@@ -29,7 +29,7 @@ impl std::fmt::Display for Value
 }
 
 /// Value Types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValueType
 {
     pub references: usize,
@@ -52,7 +52,7 @@ impl std::fmt::Display for ValueType
 }
 
 /// Raw Value Type
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RawValueType
 {
     Void,

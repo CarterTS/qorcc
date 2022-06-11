@@ -50,7 +50,8 @@ impl IRFunction
             blocks: vec![IRBlock::new(0)],
             current_block: 0,
             scope_stack: Vec::new(),
-            next_register: 0
+            next_register: 0,
+            next_block: 1
         };
 
         let scope = IRScope::from_arguments(arguments, &mut result);
@@ -90,6 +91,13 @@ impl IRFunction
         {
             panic!()
         }
+    }
+
+    pub fn add_jump(&mut self, block_index: usize) -> CompilerResult<()>
+    {
+        self.mut_current_block().add_instruction(IRInstruction::Jump { dest: block_index });
+
+        Ok(())
     }
 
     pub fn add_three_op_instruction(&mut self, children: &Vec<ParseTreeNode>) -> CompilerResult<(IRValue, IRValue, IRValue)>
@@ -173,7 +181,60 @@ impl IRFunction
 
                 Ok(())
             },
-            _ => panic!(),
+            ParseTreeNode::IfStatement { children } =>
+            {
+                // Backup the current block index
+                let initial_block = self.current_block;
+                
+                // Extract the condition and the statement to be executed if that condition evaluates to true
+                let condition = children.get(0).expect("IfStatement needs at least two children");
+                let statement = children.get(1).expect("IfStatement needs at least two children");
+
+                // Allocate the true branch
+                let true_branch = self.alloc_next_block();
+
+                // Write the true statement to the true branch
+                self.current_block = true_branch;
+                self.add_statement(statement.clone())?;
+
+                // Allocate the false branch
+                let false_branch = self.alloc_next_block();
+
+                // Add the conditional jump instruction to the initial block
+                self.current_block = initial_block;
+                let condition_value = self.generate_expression(condition)?;
+                self.mut_current_block().add_instruction(IRInstruction::Branch { condition: IRBranchCondition::NotEqual, src1: condition_value, src2: IRValue::Immediate(Value::code_constant(0)), dest_true: true_branch, dest_false: false_branch });
+
+                // We need to know what branch should be skipped to when we write to the true branch
+                let skip_branch;
+
+                if let Some(false_statement) = children.get(2)
+                {
+                    skip_branch = self.alloc_next_block();
+
+                    // Add the false statement to the false branch
+                    self.current_block = false_branch;
+                    self.add_statement(false_statement.clone())?;
+                    self.add_jump(skip_branch)?;
+                }
+                else
+                {
+                    skip_branch = false_branch;
+                }
+
+                // Add the jump to the skip branch to the true branch
+                self.current_block = true_branch;
+                self.add_jump(skip_branch)?;
+
+                self.current_block = skip_branch;
+
+                Ok(())
+            },
+            _ => 
+            {
+                error!("Unhandled statement {}", statement);
+                panic!()
+            },
         }
     }
 }

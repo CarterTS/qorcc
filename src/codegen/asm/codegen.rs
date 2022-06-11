@@ -81,7 +81,7 @@ impl AssemblyCodeGenerator
     {
         let mut result = String::new();
 
-        result += &format!("  __{}_{}:\n", function.name, block.label);
+        result += &format!("  {}:\n", self.block_label_raw(block, function));
 
         for inst in &block.instructions
         {
@@ -91,7 +91,17 @@ impl AssemblyCodeGenerator
         Ok(result)
     }
 
-    pub fn emit_instruction(&self, inst: &IRInstruction, _block: &IRBlock, _function: &IRFunction) -> CompilerResult<String>
+    pub fn block_label_raw(&self, block: &IRBlock, function: &IRFunction) -> String
+    {
+        format!("__{}_{}", function.name, block.label)
+    }
+
+    pub fn block_label(&self, block: usize, function: &IRFunction) -> String
+    {
+        self.block_label_raw(&function.blocks[block], function)
+    }
+
+    pub fn emit_instruction(&self, inst: &IRInstruction, _block: &IRBlock, function: &IRFunction) -> CompilerResult<String>
     {
         match inst
         {
@@ -153,6 +163,14 @@ impl AssemblyCodeGenerator
                 {
                     unreachable!()
                 }
+            },
+            IRInstruction::Jump { dest } =>
+            {
+                Ok(self.add_jump(*dest, function))
+            },
+            IRInstruction::Branch { condition, src1, src2, dest_true, dest_false } =>
+            {
+                Ok(self.add_branch(*condition, src1.clone(), src2.clone(), *dest_true, *dest_false, function))
             },
             _ => todo!()
         }
