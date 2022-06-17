@@ -7,8 +7,17 @@ pub use branch::*;
 pub mod codegen;
 pub use codegen::*;
 
+pub mod comparisons;
+pub use comparisons::*;
+
 pub mod div;
 pub use div::*;
+
+pub mod equality;
+pub use equality::*;
+
+pub mod inequality;
+pub use inequality::*;
 
 pub mod jump;
 pub use jump::*;

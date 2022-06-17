@@ -209,7 +209,8 @@ pub enum IRInstruction
     Div { dest: IRValue, src1: IRValue, src2: IRValue },
     Mod { dest: IRValue, src1: IRValue, src2: IRValue },
     Jump { dest: usize },
-    Branch { condition: IRBranchCondition, src1: IRValue,  src2: IRValue, dest_true: usize, dest_false: usize }
+    Branch { condition: IRBranchCondition, src1: IRValue,  src2: IRValue, dest_true: usize, dest_false: usize },
+    Conditional { condition: IRBranchCondition, dest: IRValue, src1: IRValue, src2: IRValue }
 }
 
 impl std::fmt::Display for IRInstruction
@@ -226,6 +227,7 @@ impl std::fmt::Display for IRInstruction
             IRInstruction::Mod { dest, src1, src2 } => write!(f, "mod     {}, {}, {}", dest ,src1, src2),
             IRInstruction::Jump { dest } => write!(f, "j       L{}", dest),
             IRInstruction::Branch { condition, src1, src2, dest_true, dest_false } => write!(f, "b{}     {}, {}, L{}, L{}", condition, src1, src2, dest_true, dest_false),
+            IRInstruction::Conditional { condition, dest, src1, src2 } => write!(f, "s{}     {}, {}, {}", condition, dest, src1, src2),
         }
     } 
 }

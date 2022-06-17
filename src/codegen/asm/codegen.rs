@@ -172,6 +172,25 @@ impl AssemblyCodeGenerator
             {
                 Ok(self.add_branch(*condition, src1.clone(), src2.clone(), *dest_true, *dest_false, function))
             },
+            IRInstruction::Conditional { condition, dest, src1, src2 } =>
+            {
+                if let IRValue::Register(dest) = dest
+                {
+                    Ok(match condition
+                    {
+                        crate::codegen::IRBranchCondition::Equal => self.add_equality(*self.mapping.get(dest).unwrap(), src1, src2),
+                        crate::codegen::IRBranchCondition::NotEqual => self.add_inequality(*self.mapping.get(dest).unwrap(), src1, src2),
+                        crate::codegen::IRBranchCondition::LessThan => self.add_less_than(*self.mapping.get(dest).unwrap(), src1, src2),
+                        crate::codegen::IRBranchCondition::GreaterThan => self.add_less_than(*self.mapping.get(dest).unwrap(), src2, src1),
+                        crate::codegen::IRBranchCondition::LessThanEqualTo => self.add_greater_than_equal(*self.mapping.get(dest).unwrap(), src2, src1),
+                        crate::codegen::IRBranchCondition::GreaterThanEqualTo => self.add_greater_than_equal(*self.mapping.get(dest).unwrap(), src1, src2),
+                    })
+                }
+                else
+                {
+                    unreachable!()
+                }
+            },
             _ => todo!()
         }
     }

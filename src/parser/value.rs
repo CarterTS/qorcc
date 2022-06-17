@@ -94,6 +94,16 @@ impl RawValueType
             _ => panic!(),
         }
     }
+
+    pub fn is_signed(&self) -> bool
+    {
+        matches!(self, RawValueType::I8 | RawValueType::I16 | RawValueType::I32 | RawValueType::I64)
+    }
+
+    pub fn is_unsigned(&self) -> bool
+    {
+        matches!(self, RawValueType::U8 | RawValueType::U16 | RawValueType::U32 | RawValueType::U64)
+    }
 }
 
 impl std::fmt::Display for RawValueType

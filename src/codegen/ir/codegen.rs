@@ -146,6 +146,38 @@ impl IRFunction
 
                 Ok(dest)
             },
+            ParseTreeNode::EqualityExpression { operation, children, .. } =>
+            {
+                let (dest, src1, src2) = self.add_three_op_instruction(children)?;
+
+                let cond = match operation
+                {
+                    EqualityExpressionOperation::Equality => IRBranchCondition::Equal,
+                    EqualityExpressionOperation::Nonequality => IRBranchCondition::NotEqual,  
+                };
+
+                self.mut_current_block().add_instruction(
+                    IRInstruction::Conditional { condition: cond, dest: dest.clone(), src1, src2 });
+
+                Ok(dest)
+            },
+            ParseTreeNode::RelationalExpression { operation, children, .. } =>
+            {
+                let (dest, src1, src2) = self.add_three_op_instruction(children)?;
+
+                let cond = match operation
+                {
+                    RelationalExpressionOperation::GreaterThan => IRBranchCondition::GreaterThan,
+                    RelationalExpressionOperation::GreaterThanOrEqual => IRBranchCondition::GreaterThanEqualTo,
+                    RelationalExpressionOperation::LessThan => IRBranchCondition::LessThan,  
+                    RelationalExpressionOperation::LessThanOrEqual => IRBranchCondition::LessThanEqualTo,
+                };
+
+                self.mut_current_block().add_instruction(
+                    IRInstruction::Conditional { condition: cond, dest: dest.clone(), src1, src2 });
+
+                Ok(dest)
+            }
             _ => 
             {
                 error!("Unhandled Expression Type {}", expression);
