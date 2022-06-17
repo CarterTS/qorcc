@@ -210,7 +210,11 @@ pub enum IRInstruction
     Mod { dest: IRValue, src1: IRValue, src2: IRValue },
     Jump { dest: usize },
     Branch { condition: IRBranchCondition, src1: IRValue,  src2: IRValue, dest_true: usize, dest_false: usize },
-    Conditional { condition: IRBranchCondition, dest: IRValue, src1: IRValue, src2: IRValue }
+    Conditional { condition: IRBranchCondition, dest: IRValue, src1: IRValue, src2: IRValue },
+    Backup { register: usize },
+    Restore { register: usize },
+    FunctionCall { name: String, arguments: Vec<IRValue> },
+    LoadRet { dest: IRValue }
 }
 
 impl std::fmt::Display for IRInstruction
@@ -228,6 +232,25 @@ impl std::fmt::Display for IRInstruction
             IRInstruction::Jump { dest } => write!(f, "j       L{}", dest),
             IRInstruction::Branch { condition, src1, src2, dest_true, dest_false } => write!(f, "b{}     {}, {}, L{}, L{}", condition, src1, src2, dest_true, dest_false),
             IRInstruction::Conditional { condition, dest, src1, src2 } => write!(f, "s{}     {}, {}, {}", condition, dest, src1, src2),
+            IRInstruction::Backup { register } => write!(f, "backup  {}", IRValue::Register(*register)),
+            IRInstruction::Restore { register } => write!(f, "restore {}", IRValue::Register(*register)),
+            IRInstruction::LoadRet { dest } => write!(f, "loadret {}", dest),
+            IRInstruction::FunctionCall { name, arguments } => 
+            {
+                write!(f, "call    {}(", name)?;
+
+                for (i, arg) in arguments.iter().enumerate()
+                {
+                    if i > 0
+                    {
+                        write!(f, ", ")?;
+                    }
+
+                    write!(f, "{}", arg)?;
+                }
+
+                write!(f, ")")
+            }
         }
     } 
 }

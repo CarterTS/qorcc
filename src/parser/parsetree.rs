@@ -60,6 +60,19 @@ impl ParseTreeNode
         }
     }
 
+    /// Get just a variable name
+    pub fn get_variable_name(&self) -> Option<String>
+    {
+        if let ParseTreeNode::VariableExpression { name, .. } = self
+        {
+            Some(name.clone())
+        }
+        else
+        {
+            None
+        }
+    }
+
     /// Get a reference to the children if available
     pub fn get_children(&self) -> Option<Vec<ParseTreeNode>>
     {

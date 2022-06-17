@@ -178,6 +178,61 @@ impl IRFunction
 
                 Ok(dest)
             }
+            ParseTreeNode::PostfixExpression { operation, children, .. } =>
+            {
+                match operation
+                {
+                    PostfixExpressionOperation::ArrayIndexing => todo!(),
+                    PostfixExpressionOperation::MemberAccess => todo!(),
+                    PostfixExpressionOperation::IndirectMemberAccess => todo!(),
+                    PostfixExpressionOperation::Increment => todo!(),
+                    PostfixExpressionOperation::Decrement => todo!(),
+                    PostfixExpressionOperation::InitializerList => todo!(),
+                    PostfixExpressionOperation::FunctionCall => 
+                    {
+                        let dest_reg_num = self.alloc_next_register();
+                        let dest = IRValue::Register(dest_reg_num);
+
+                        let argument_count = children.len() - 1;
+
+                        assert!(argument_count < 4); // TODO: Make sure we can handle more registers than just four arguments
+                        
+                        // Get all of the arguments
+                        let mut argument_values = Vec::new();
+
+                        for arg in &children[1..]
+                        {
+                            let arg_val = self.generate_expression(arg)?;
+
+                            let arg_reg = IRValue::Register(self.alloc_next_register());
+
+                            self.mut_current_block().add_instruction(IRInstruction::Add { dest: arg_reg.clone(), src1: arg_val, src2: IRValue::Immediate(Value::code_constant(0)) });
+
+                            argument_values.push(arg_reg);
+                        }
+
+                        // Backup the argument registers
+                        for reg_number in 0..argument_count
+                        {
+                            if reg_number == dest_reg_num { continue; }
+                            self.mut_current_block().add_instruction(IRInstruction::Backup { register: reg_number })
+                        }
+
+                        self.mut_current_block().add_instruction(IRInstruction::FunctionCall { name: children[0].get_variable_name().unwrap(), arguments: argument_values.clone() });
+
+                        self.mut_current_block().add_instruction(IRInstruction::LoadRet { dest: dest.clone() });
+
+                        // Restore the argument registers
+                        for reg_number in (0..argument_count).rev()
+                        {
+                            if reg_number == dest_reg_num { continue; }
+                            self.mut_current_block().add_instruction(IRInstruction::Restore { register: reg_number })
+                        }
+
+                        Ok(dest)
+                    }
+                }
+            },
             _ => 
             {
                 error!("Unhandled Expression Type {}", expression);

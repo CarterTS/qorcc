@@ -191,6 +191,40 @@ impl AssemblyCodeGenerator
                     unreachable!()
                 }
             },
+            IRInstruction::Backup { register } =>
+            {
+                Ok(format!("    push {}\n", self.mapping.get(register).unwrap()))
+            },
+            IRInstruction::Restore { register } =>
+            {
+                Ok(format!("    pop {}\n", self.mapping.get(register).unwrap()))
+            },
+            IRInstruction::FunctionCall { name, arguments } =>
+            {
+                let mut result = String::new();
+
+                let argument_registers = [Register::A0, Register::A1, Register::A2, Register::A3];
+
+                for (arg, reg) in arguments.iter().zip(argument_registers)
+                {
+                    result += &self.move_reg_value(reg, arg.clone());
+                }
+
+                result += &format!("    call {}\n", name);
+
+                Ok(result)
+            },
+            IRInstruction::LoadRet { dest } =>
+            {
+                if let IRValue::Register(reg) = dest
+                {
+                    Ok(self.move_reg_reg(*self.mapping.get(reg).unwrap(), Register::A0))
+                }
+                else
+                {
+                    unreachable!()
+                }
+            }
             _ => todo!()
         }
     }
